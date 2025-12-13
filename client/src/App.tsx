@@ -10,6 +10,8 @@ import Dashboard from "./pages/Dashboard";
 import SupplierRegistration from "./pages/SupplierRegistration";
 import BuyerRegistration from "./pages/BuyerRegistration";
 import AdminDashboard from "./pages/AdminDashboard";
+import FeedstockCreate from "./pages/FeedstockCreate";
+import SendInquiry from "./pages/SendInquiry";
 
 function Router() {
   return (
@@ -20,6 +22,8 @@ function Router() {
       <Route path="/supplier/register" component={SupplierRegistration} />
       <Route path="/buyer/register" component={BuyerRegistration} />
       <Route path="/admin" component={AdminDashboard} />
+      <Route path="/feedstock/create" component={FeedstockCreate} />
+      <Route path="/inquiry/send" component={SendInquiry} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

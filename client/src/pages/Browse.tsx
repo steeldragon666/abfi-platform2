@@ -241,9 +241,11 @@ export default function Browse() {
                         <Button className="flex-1" size="sm">
                           View Details
                         </Button>
-                        <Button variant="outline" size="sm">
-                          Send Inquiry
-                        </Button>
+                        <Link href={`/inquiry/send?feedstockId=${feedstock.id}`}>
+                          <Button variant="outline" size="sm">
+                            Send Inquiry
+                          </Button>
+                        </Link>
                       </div>
                     </CardContent>
                   </Card>

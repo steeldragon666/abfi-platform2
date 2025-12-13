@@ -214,9 +214,13 @@ export default function Dashboard() {
                       0
                     </div>
                     <p className="text-sm text-gray-600 mb-4">Active listings</p>
-                    <Button className="w-full" size="sm">
-                      View All
-                    </Button>
+                    <div className="flex gap-2">
+                      <Link href="/feedstock/create">
+                        <Button className="w-full" size="sm">
+                          Add New
+                        </Button>
+                      </Link>
+                    </div>
                   </CardContent>
                 </Card>
 
