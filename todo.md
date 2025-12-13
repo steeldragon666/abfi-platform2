@@ -115,3 +115,30 @@
 - [x] Browse feedstocks with advanced filters
 - [x] Feedstock creation form
 - [x] Inquiry/RFQ system
+
+## Phase 11: Bankability Accreditation Module
+- [x] Create projects table for bioenergy project tracking
+- [x] Create supply_agreements table (Tier 1, Tier 2, Options, ROFR)
+- [x] Create grower_qualifications table (GQ1-GQ4 levels)
+- [x] Create bankability_assessments table
+- [x] Create bankability_certificates table
+- [x] Create lender_access table for lender portal permissions
+- [x] Create covenant_monitoring table
+- [x] Implement Volume Security scoring (30% weight)
+- [x] Implement Counterparty Quality scoring (25% weight)
+- [x] Implement Contract Structure scoring (20% weight)
+- [x] Implement Concentration Risk scoring (15% weight - HHI calculation)
+- [x] Implement Operational Readiness scoring (10% weight)
+- [x] Build composite bankability score calculator (AAA-CCC rating)
+- [ ] Create project developer dashboard with supply position visualization
+- [ ] Build agreement pipeline view (Tier 1, Tier 2, Options, ROFR)
+- [ ] Create agreement CRUD interface
+- [ ] Build concentration analysis view with HHI and geographic distribution
+- [ ] Implement grower qualification assessment workflow
+- [ ] Create bankability assessment wizard
+- [ ] Build certificate generator (PDF with QR code)
+- [ ] Create lender portal (read-only monitoring view)
+- [ ] Implement alert system for contract renewals and covenant breaches
+- [ ] Add monitoring jobs (daily covenant check, weekly supply recalc)
+- [ ] Build admin interface for assessor workflow
+- [ ] Write comprehensive tests for all scoring algorithms

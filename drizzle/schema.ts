@@ -457,3 +457,393 @@ export const auditLogs = mysqlTable("auditLogs", {
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = typeof auditLogs.$inferInsert;
+
+// ============================================================================
+// BANKABILITY MODULE - Projects & Supply Agreements
+// ============================================================================
+
+export const projects = mysqlTable("projects", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  userId: int("userId").notNull().references(() => users.id), // Project developer
+  
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  
+  // Facility details
+  facilityLocation: varchar("facilityLocation", { length: 255 }),
+  state: mysqlEnum("state", ["NSW", "VIC", "QLD", "SA", "WA", "TAS", "NT", "ACT"]),
+  latitude: varchar("latitude", { length: 20 }),
+  longitude: varchar("longitude", { length: 20 }),
+  
+  // Capacity
+  nameplateCapacity: int("nameplateCapacity").notNull(), // tonnes per annum
+  feedstockType: varchar("feedstockType", { length: 100 }), // Primary feedstock type
+  
+  // Project timeline
+  targetCOD: timestamp("targetCOD"), // Commercial Operation Date
+  financialCloseTarget: timestamp("financialCloseTarget"),
+  
+  // Debt structure
+  debtTenor: int("debtTenor"), // years
+  
+  // Status
+  status: mysqlEnum("status", [
+    "planning",
+    "development",
+    "financing",
+    "construction",
+    "operational",
+    "suspended"
+  ]).default("planning").notNull(),
+  
+  // Supply targets (percentages)
+  tier1Target: int("tier1Target").default(80), // % of capacity
+  tier2Target: int("tier2Target").default(40),
+  optionsTarget: int("optionsTarget").default(15),
+  rofrTarget: int("rofrTarget").default(15),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("projects_userId_idx").on(table.userId),
+  statusIdx: index("projects_status_idx").on(table.status),
+}));
+
+export type Project = typeof projects.$inferSelect;
+export type InsertProject = typeof projects.$inferInsert;
+
+// ============================================================================
+// SUPPLY AGREEMENTS
+// ============================================================================
+
+export const supplyAgreements = mysqlTable("supplyAgreements", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  projectId: int("projectId").notNull().references(() => projects.id),
+  supplierId: int("supplierId").notNull().references(() => suppliers.id),
+  
+  // Agreement classification
+  tier: mysqlEnum("tier", ["tier1", "tier2", "option", "rofr"]).notNull(),
+  
+  // Volume commitments
+  annualVolume: int("annualVolume").notNull(), // tonnes per annum
+  flexBandPercent: int("flexBandPercent"), // ±% flexibility
+  
+  // Term
+  startDate: timestamp("startDate").notNull(),
+  endDate: timestamp("endDate").notNull(),
+  termYears: int("termYears").notNull(),
+  
+  // Pricing
+  pricingMechanism: mysqlEnum("pricingMechanism", [
+    "fixed",
+    "fixed_with_escalation",
+    "index_linked",
+    "index_with_floor_ceiling",
+    "spot_reference"
+  ]).notNull(),
+  basePrice: int("basePrice"), // cents per tonne
+  floorPrice: int("floorPrice"),
+  ceilingPrice: int("ceilingPrice"),
+  escalationRate: varchar("escalationRate", { length: 50 }), // e.g., "CPI+1%"
+  
+  // Take-or-pay / Deliver-or-pay
+  takeOrPayPercent: int("takeOrPayPercent"), // Project minimum purchase %
+  deliverOrPayPercent: int("deliverOrPayPercent"), // Supplier minimum delivery %
+  
+  // Option-specific fields
+  optionFeePercent: int("optionFeePercent"), // Annual option fee as % of notional
+  strikePrice: int("strikePrice"), // cents per tonne
+  exerciseWindowDays: int("exerciseWindowDays"),
+  
+  // ROFR-specific fields
+  rofrAnnualFee: int("rofrAnnualFee"), // Fixed annual fee
+  rofrNoticeDays: int("rofrNoticeDays"), // Days to match offer
+  
+  // Quality requirements
+  minAbfiScore: int("minAbfiScore"),
+  maxCarbonIntensity: int("maxCarbonIntensity"),
+  qualitySpecs: json("qualitySpecs").$type<Record<string, any>>(),
+  
+  // Security package
+  bankGuaranteePercent: int("bankGuaranteePercent"),
+  bankGuaranteeAmount: int("bankGuaranteeAmount"), // AUD
+  parentGuarantee: boolean("parentGuarantee").default(false),
+  lenderStepInRights: boolean("lenderStepInRights").default(false),
+  
+  // Termination provisions
+  earlyTerminationNoticeDays: int("earlyTerminationNoticeDays"),
+  lenderConsentRequired: boolean("lenderConsentRequired").default(false),
+  
+  // Force majeure
+  forceMajeureVolumeReductionCap: int("forceMajeureVolumeReductionCap"), // %
+  
+  // Status
+  status: mysqlEnum("status", [
+    "draft",
+    "negotiation",
+    "executed",
+    "active",
+    "suspended",
+    "terminated"
+  ]).default("draft").notNull(),
+  
+  executionDate: timestamp("executionDate"),
+  
+  // Documents
+  documentUrl: varchar("documentUrl", { length: 500 }),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  projectIdIdx: index("supplyAgreements_projectId_idx").on(table.projectId),
+  supplierIdIdx: index("supplyAgreements_supplierId_idx").on(table.supplierId),
+  tierIdx: index("supplyAgreements_tier_idx").on(table.tier),
+  statusIdx: index("supplyAgreements_status_idx").on(table.status),
+}));
+
+export type SupplyAgreement = typeof supplyAgreements.$inferSelect;
+export type InsertSupplyAgreement = typeof supplyAgreements.$inferInsert;
+
+// ============================================================================
+// GROWER QUALIFICATIONS
+// ============================================================================
+
+export const growerQualifications = mysqlTable("growerQualifications", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  supplierId: int("supplierId").notNull().references(() => suppliers.id),
+  
+  // Qualification level
+  level: mysqlEnum("level", ["GQ1", "GQ2", "GQ3", "GQ4"]).notNull(),
+  levelName: varchar("levelName", { length: 50 }), // "Premier", "Qualified", "Developing", "Provisional"
+  
+  // Assessment criteria scores (0-100)
+  operatingHistoryScore: int("operatingHistoryScore"),
+  financialStrengthScore: int("financialStrengthScore"),
+  landTenureScore: int("landTenureScore"),
+  productionCapacityScore: int("productionCapacityScore"),
+  creditScore: int("creditScore"),
+  insuranceScore: int("insuranceScore"),
+  
+  // Composite score
+  compositeScore: int("compositeScore").notNull(),
+  
+  // Assessment details
+  assessedBy: int("assessedBy").references(() => users.id), // Assessor user ID
+  assessmentDate: timestamp("assessmentDate").notNull(),
+  assessmentNotes: text("assessmentNotes"),
+  
+  // Validity
+  validFrom: timestamp("validFrom").notNull(),
+  validUntil: timestamp("validUntil").notNull(),
+  
+  // Status
+  status: mysqlEnum("status", [
+    "pending",
+    "approved",
+    "expired",
+    "revoked"
+  ]).default("pending").notNull(),
+  
+  // Supporting documents
+  documentsUrl: json("documentsUrl").$type<string[]>(),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  supplierIdIdx: index("growerQualifications_supplierId_idx").on(table.supplierId),
+  levelIdx: index("growerQualifications_level_idx").on(table.level),
+  statusIdx: index("growerQualifications_status_idx").on(table.status),
+  validUntilIdx: index("growerQualifications_validUntil_idx").on(table.validUntil),
+}));
+
+export type GrowerQualification = typeof growerQualifications.$inferSelect;
+export type InsertGrowerQualification = typeof growerQualifications.$inferInsert;
+
+// ============================================================================
+// BANKABILITY ASSESSMENTS
+// ============================================================================
+
+export const bankabilityAssessments = mysqlTable("bankabilityAssessments", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  projectId: int("projectId").notNull().references(() => projects.id),
+  
+  // Assessment metadata
+  assessmentNumber: varchar("assessmentNumber", { length: 50 }).notNull().unique(), // ABFI-BANK-YYYY-NNNNN
+  assessmentDate: timestamp("assessmentDate").notNull(),
+  assessedBy: int("assessedBy").references(() => users.id),
+  
+  // Category scores (0-100)
+  volumeSecurityScore: int("volumeSecurityScore").notNull(),
+  counterpartyQualityScore: int("counterpartyQualityScore").notNull(),
+  contractStructureScore: int("contractStructureScore").notNull(),
+  concentrationRiskScore: int("concentrationRiskScore").notNull(),
+  operationalReadinessScore: int("operationalReadinessScore").notNull(),
+  
+  // Composite score and rating
+  compositeScore: int("compositeScore").notNull(), // 0-100
+  rating: mysqlEnum("rating", ["AAA", "AA", "A", "BBB", "BB", "B", "CCC"]).notNull(),
+  ratingDescription: varchar("ratingDescription", { length: 100 }),
+  
+  // Supply position summary
+  tier1Volume: int("tier1Volume"),
+  tier1Percent: int("tier1Percent"),
+  tier2Volume: int("tier2Volume"),
+  tier2Percent: int("tier2Percent"),
+  optionsVolume: int("optionsVolume"),
+  optionsPercent: int("optionsPercent"),
+  rofrVolume: int("rofrVolume"),
+  rofrPercent: int("rofrPercent"),
+  totalPrimaryVolume: int("totalPrimaryVolume"),
+  totalPrimaryPercent: int("totalPrimaryPercent"),
+  totalSecondaryVolume: int("totalSecondaryVolume"),
+  totalSecondaryPercent: int("totalSecondaryPercent"),
+  totalSecuredVolume: int("totalSecuredVolume"),
+  totalSecuredPercent: int("totalSecuredPercent"),
+  
+  // Contract summary
+  totalAgreements: int("totalAgreements"),
+  weightedAvgTerm: varchar("weightedAvgTerm", { length: 20 }), // e.g., "16.2 years"
+  weightedAvgGQ: varchar("weightedAvgGQ", { length: 20 }), // e.g., "1.8"
+  securityCoverageAmount: int("securityCoverageAmount"), // AUD
+  
+  // Concentration metrics
+  supplierHHI: int("supplierHHI"),
+  largestSupplierPercent: int("largestSupplierPercent"),
+  climateZones: int("climateZones"),
+  maxSingleEventExposure: int("maxSingleEventExposure"), // %
+  
+  // Key findings
+  strengths: json("strengths").$type<string[]>(),
+  monitoringItems: json("monitoringItems").$type<string[]>(),
+  
+  // Status
+  status: mysqlEnum("status", [
+    "draft",
+    "submitted",
+    "under_review",
+    "approved",
+    "rejected"
+  ]).default("draft").notNull(),
+  
+  // Validity
+  validFrom: timestamp("validFrom"),
+  validUntil: timestamp("validUntil"),
+  
+  // Certificate
+  certificateIssued: boolean("certificateIssued").default(false),
+  certificateIssuedAt: timestamp("certificateIssuedAt"),
+  certificateUrl: varchar("certificateUrl", { length: 500 }),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  projectIdIdx: index("bankabilityAssessments_projectId_idx").on(table.projectId),
+  assessmentNumberIdx: index("bankabilityAssessments_assessmentNumber_idx").on(table.assessmentNumber),
+  ratingIdx: index("bankabilityAssessments_rating_idx").on(table.rating),
+  statusIdx: index("bankabilityAssessments_status_idx").on(table.status),
+  validUntilIdx: index("bankabilityAssessments_validUntil_idx").on(table.validUntil),
+}));
+
+export type BankabilityAssessment = typeof bankabilityAssessments.$inferSelect;
+export type InsertBankabilityAssessment = typeof bankabilityAssessments.$inferInsert;
+
+// ============================================================================
+// LENDER ACCESS
+// ============================================================================
+
+export const lenderAccess = mysqlTable("lenderAccess", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  projectId: int("projectId").notNull().references(() => projects.id),
+  
+  // Lender details
+  lenderName: varchar("lenderName", { length: 255 }).notNull(),
+  lenderEmail: varchar("lenderEmail", { length: 320 }).notNull(),
+  lenderContact: varchar("lenderContact", { length: 255 }),
+  
+  // Access control
+  accessToken: varchar("accessToken", { length: 64 }).notNull().unique(),
+  grantedBy: int("grantedBy").notNull().references(() => users.id),
+  grantedAt: timestamp("grantedAt").defaultNow().notNull(),
+  
+  // Permissions
+  canViewAgreements: boolean("canViewAgreements").default(true),
+  canViewAssessments: boolean("canViewAssessments").default(true),
+  canViewCovenants: boolean("canViewCovenants").default(true),
+  canDownloadReports: boolean("canDownloadReports").default(true),
+  
+  // Validity
+  validFrom: timestamp("validFrom").notNull(),
+  validUntil: timestamp("validUntil").notNull(),
+  
+  // Status
+  status: mysqlEnum("status", ["active", "suspended", "revoked", "expired"]).default("active").notNull(),
+  
+  // Audit
+  lastAccessedAt: timestamp("lastAccessedAt"),
+  accessCount: int("accessCount").default(0),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  projectIdIdx: index("lenderAccess_projectId_idx").on(table.projectId),
+  accessTokenIdx: index("lenderAccess_accessToken_idx").on(table.accessToken),
+  statusIdx: index("lenderAccess_status_idx").on(table.status),
+}));
+
+export type LenderAccess = typeof lenderAccess.$inferSelect;
+export type InsertLenderAccess = typeof lenderAccess.$inferInsert;
+
+// ============================================================================
+// COVENANT MONITORING
+// ============================================================================
+
+export const covenantMonitoring = mysqlTable("covenantMonitoring", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  projectId: int("projectId").notNull().references(() => projects.id),
+  
+  // Covenant details
+  covenantType: varchar("covenantType", { length: 100 }).notNull(), // e.g., "minimum_primary_coverage", "max_concentration"
+  covenantDescription: text("covenantDescription"),
+  
+  // Threshold
+  thresholdValue: varchar("thresholdValue", { length: 100 }).notNull(),
+  thresholdOperator: mysqlEnum("thresholdOperator", [">=", "<=", "=", ">", "<"]).notNull(),
+  
+  // Current value
+  currentValue: varchar("currentValue", { length: 100 }),
+  
+  // Compliance
+  inCompliance: boolean("inCompliance").notNull(),
+  breachDate: timestamp("breachDate"),
+  breachNotified: boolean("breachNotified").default(false),
+  breachNotifiedAt: timestamp("breachNotifiedAt"),
+  
+  // Cure period
+  curePeriodDays: int("curePeriodDays"),
+  cureDeadline: timestamp("cureDeadline"),
+  cured: boolean("cured").default(false),
+  curedAt: timestamp("curedAt"),
+  
+  // Monitoring
+  lastCheckedAt: timestamp("lastCheckedAt").notNull(),
+  checkFrequency: mysqlEnum("checkFrequency", ["daily", "weekly", "monthly", "quarterly"]).notNull(),
+  
+  // Status
+  status: mysqlEnum("status", ["active", "breached", "cured", "waived", "inactive"]).default("active").notNull(),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  projectIdIdx: index("covenantMonitoring_projectId_idx").on(table.projectId),
+  statusIdx: index("covenantMonitoring_status_idx").on(table.status),
+  lastCheckedAtIdx: index("covenantMonitoring_lastCheckedAt_idx").on(table.lastCheckedAt),
+}));
+
+export type CovenantMonitoring = typeof covenantMonitoring.$inferSelect;
+export type InsertCovenantMonitoring = typeof covenantMonitoring.$inferInsert;
