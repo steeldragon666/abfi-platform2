@@ -32,6 +32,7 @@ export default function FeedstockMap() {
   const [selectedStates, setSelectedStates] = useState<string[]>(["QLD", "NSW", "VIC", "SA", "WA", "TAS"]);
   const [searchQuery, setSearchQuery] = useState("");
   const [radiusCenter, setRadiusCenter] = useState<[number, number] | null>(null);
+  const [radiusKm, setRadiusKm] = useState(50);
   const [analysisResults, setAnalysisResults] = useState<AnalysisResults | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
@@ -312,8 +313,8 @@ export default function FeedstockMap() {
     }
   };
 
-  // Draw 50km radius and analyze
-  const draw50kmRadius = async () => {
+  // Draw radius and analyze
+  const drawRadius = async () => {
     if (!map.current) return;
 
     const center = map.current.getCenter();
@@ -328,8 +329,8 @@ export default function FeedstockMap() {
       map.current.removeSource("radius-circle");
     }
 
-    // Create circle (50km = ~0.45 degrees at equator)
-    const radius = 50 / 111; // Convert km to degrees (approximate)
+    // Create circle (convert km to degrees, approximate)
+    const radius = radiusKm / 111; // Convert km to degrees (approximate)
     const points = 64;
     const coordinates: [number, number][] = [];
 
@@ -366,7 +367,7 @@ export default function FeedstockMap() {
 
     // Run analysis
     try {
-      const results = await analyzeRadius(center.lat, center.lng, 50);
+      const results = await analyzeRadius(center.lat, center.lng, radiusKm);
       setAnalysisResults(results);
     } catch (error) {
       console.error("Analysis failed:", error);
@@ -408,11 +409,35 @@ export default function FeedstockMap() {
             </CardContent>
           </Card>
 
+          {/* Radius Slider */}
+          <Card className="mt-4">
+            <CardContent className="pt-6">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-sm font-medium">Analysis Radius</label>
+                  <Badge variant="outline">{radiusKm} km</Badge>
+                </div>
+                <Slider
+                  value={[radiusKm]}
+                  onValueChange={(value) => setRadiusKm(value[0])}
+                  min={10}
+                  max={200}
+                  step={5}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>10 km</span>
+                  <span>200 km</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Map Controls */}
           <div className="mt-4 flex gap-2">
-            <Button onClick={draw50kmRadius} variant="outline" disabled={isAnalyzing}>
+            <Button onClick={drawRadius} variant="outline" disabled={isAnalyzing}>
               <Target className="h-4 w-4 mr-2" />
-              {isAnalyzing ? "Analyzing..." : "Draw 50km Radius"}
+              {isAnalyzing ? "Analyzing..." : `Draw ${radiusKm}km Radius`}
             </Button>
             {radiusCenter && (
               <Button onClick={clearRadius} variant="outline">
@@ -429,7 +454,7 @@ export default function FeedstockMap() {
           {analysisResults && (
             <Card className="mt-4">
               <CardHeader>
-                <CardTitle>50km Radius Analysis</CardTitle>
+                <CardTitle>{radiusKm}km Radius Analysis</CardTitle>
                 <CardDescription>
                   Supply chain feasibility assessment for selected area
                 </CardDescription>
