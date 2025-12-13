@@ -25,6 +25,7 @@
 - [x] Create supplier registration wizard
 - [x] Implement ABN validation
 - [x] Build supplier dashboard homepage
+- [x] Add suppliers.get API method
 - [ ] Create company profile management page
 - [ ] Build settings interface
 
@@ -65,7 +66,7 @@
 - [x] Create map view with Google Maps integration
 - [x] Add feedstock markers with color-coded ABFI scores
 - [x] Build list view with sorting
-- [ ] Implement pagination
+- [x] Implement pagination
 - [x] Create saved searches functionality
 - [ ] Add shortlist/favorites system
 - [x] Build feedstock detail page

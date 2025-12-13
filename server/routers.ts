@@ -82,6 +82,18 @@ export const appRouter = router({
   // ============================================================================
   
   suppliers: router({
+    get: protectedProcedure
+      .query(async ({ ctx }) => {
+        const supplier = await db.getSupplierByUserId(ctx.user.id);
+        if (!supplier) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Supplier profile not found',
+          });
+        }
+        return supplier;
+      }),
+    
     create: protectedProcedure
       .input(z.object({
         abn: z.string().length(11),

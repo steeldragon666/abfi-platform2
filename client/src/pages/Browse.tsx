@@ -15,14 +15,19 @@ export default function Browse() {
   const [selectedStates, setSelectedStates] = useState<string[]>([]);
   const [minScore, setMinScore] = useState<number | undefined>();
   const [maxCarbon, setMaxCarbon] = useState<number | undefined>();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const { data: feedstocks, isLoading } = trpc.feedstocks.search.useQuery({
     category: selectedCategories.length > 0 ? selectedCategories : undefined,
     state: selectedStates.length > 0 ? selectedStates : undefined,
     minAbfiScore: minScore,
     maxCarbonIntensity: maxCarbon,
-    limit: 50,
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
   });
+
+  const totalPages = feedstocks ? Math.ceil(feedstocks.length / pageSize) : 0;
 
   const toggleCategory = (cat: string) => {
     setSelectedCategories(prev =>
@@ -263,6 +268,64 @@ export default function Browse() {
                   </p>
                 </CardContent>
               </Card>
+            )}
+
+            {/* Pagination */}
+            {feedstocks && feedstocks.length > 0 && (
+              <div className="mt-8 flex items-center justify-between border-t pt-6">
+                <div className="flex items-center gap-4">
+                  <Label>Items per page:</Label>
+                  <Select value={pageSize.toString()} onValueChange={(v) => { setPageSize(parseInt(v)); setPage(1); }}>
+                    <SelectTrigger className="w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span className="text-sm text-gray-600">
+                    Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, feedstocks.length)} of {feedstocks.length}
+                  </span>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                  >
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      const pageNum = i + 1;
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={page === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setPage(pageNum)}
+                          className="w-10"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
         </div>
