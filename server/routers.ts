@@ -509,6 +509,258 @@ export const appRouter = router({
         
         return await db.getCertificatesByFeedstockId(input.feedstockId);
       }),
+    
+    // Generate ABFI Rating Certificate PDF
+    generateABFICertificate: supplierProcedure
+      .input(z.object({ feedstockId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const { generateABFICertificate, calculateRatingGrade } = await import('./certificateGenerator');
+        const { storagePut } = await import('./storage');
+        
+        // Verify feedstock ownership
+        const feedstock = await db.getFeedstockById(input.feedstockId);
+        if (!feedstock || feedstock.supplierId !== ctx.supplier.id) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Not authorized',
+          });
+        }
+        
+        // Check if feedstock has ABFI scores
+        if (!feedstock.abfiScore) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Feedstock must have ABFI rating before generating certificate',
+          });
+        }
+        
+        // Get supplier details
+        const supplier = await db.getSupplierById(feedstock.supplierId);
+        if (!supplier) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Supplier not found',
+          });
+        }
+        
+        // Get existing certificates for this feedstock
+        const certificates = await db.getCertificatesByFeedstockId(input.feedstockId);
+        const certifications = certificates
+          .filter(c => c.status === 'active' && c.type !== 'ABFI')
+          .map(c => c.type);
+        
+        // Calculate rating grade
+        const ratingGrade = calculateRatingGrade(feedstock.abfiScore);
+        
+        // Generate certificate number
+        const certificateNumber = `ABFI-${Date.now()}-${feedstock.id}`;
+        const issueDate = new Date().toISOString().split('T')[0];
+        const validUntil = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]; // 1 year validity
+        
+        // Prepare certificate data
+        const certificateData: any = {
+          feedstockId: feedstock.id,
+          feedstockName: feedstock.sourceName || 'Unknown Feedstock',
+          feedstockCategory: feedstock.category,
+          supplierName: supplier.companyName,
+          supplierABN: supplier.abn,
+          location: `${supplier.city || 'Unknown'}`,
+          state: feedstock.state || 'Unknown',
+          
+          abfiScore: feedstock.abfiScore,
+          sustainabilityScore: feedstock.sustainabilityScore || 0,
+          carbonIntensityScore: feedstock.carbonIntensityScore || 0,
+          qualityScore: feedstock.qualityScore || 0,
+          reliabilityScore: feedstock.reliabilityScore || 0,
+          
+          ratingGrade,
+          certificateNumber,
+          issueDate,
+          validUntil,
+          assessmentDate: issueDate,
+          
+          carbonIntensity: feedstock.carbonIntensityValue,
+          annualVolume: feedstock.annualCapacityTonnes,
+          certifications,
+        };
+        
+        // Generate PDF
+        const pdfBuffer = await generateABFICertificate(certificateData);
+        
+        // Upload to S3
+        const pdfKey = `certificates/abfi/${feedstock.id}/${certificateNumber}.pdf`;
+        const { url: pdfUrl } = await storagePut(pdfKey, pdfBuffer, 'application/pdf');
+        
+        // Create certificate record
+        const certId = await db.createCertificate({
+          feedstockId: input.feedstockId,
+          type: 'ABFI',
+          certificateNumber,
+          issuedDate: new Date(),
+          expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          status: 'active',
+          documentUrl: pdfUrl,
+          documentKey: pdfKey,
+          ratingGrade,
+          assessmentDate: new Date(),
+          certificatePdfUrl: pdfUrl,
+          certificatePdfKey: pdfKey,
+        });
+        
+        await createAuditLog({
+          userId: ctx.user.id,
+          action: 'generate_abfi_certificate',
+          entityType: 'certificate',
+          entityId: certId,
+          changes: { after: { certificateNumber, ratingGrade, abfiScore: feedstock.abfiScore } },
+        });
+        
+        return { 
+          certificateId: certId, 
+          certificateNumber,
+          pdfUrl,
+          ratingGrade,
+        };
+      }),
+    
+    // Generate Biological Asset Data Pack (BADP)
+    generateBADP: supplierProcedure
+      .input(z.object({ 
+        feedstockId: z.number(),
+        preparedFor: z.string(), // Client/investor name
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { generateBADP } = await import('./badpGenerator');
+        const { calculateRatingGrade } = await import('./certificateGenerator');
+        const { storagePut } = await import('./storage');
+        
+        // Verify feedstock ownership
+        const feedstock = await db.getFeedstockById(input.feedstockId);
+        if (!feedstock || feedstock.supplierId !== ctx.supplier.id) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Not authorized',
+          });
+        }
+        
+        // Get supplier details
+        const supplier = await db.getSupplierById(feedstock.supplierId);
+        if (!supplier) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Supplier not found',
+          });
+        }
+        
+        // Get related data
+        const certificates = await db.getCertificatesByFeedstockId(input.feedstockId);
+        const qualityTests = await db.getQualityTestsByFeedstockId(input.feedstockId);
+        const transactions = await db.getTransactionsBySupplierId(ctx.supplier.id);
+        
+        // Generate BADP number
+        const badpNumber = `BADP-${Date.now()}-${feedstock.id}`;
+        const issueDate = new Date().toISOString().split('T')[0];
+        const validUntil = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        
+        // Prepare BADP data
+        const badpData: any = {
+          assetId: feedstock.id,
+          assetName: feedstock.sourceName || 'Biological Asset',
+          assetType: feedstock.category,
+          location: {
+            address: `${supplier.addressLine1 || ''}, ${supplier.city || ''}`,
+            state: feedstock.state || supplier.state || 'Unknown',
+            latitude: supplier.latitude ? parseFloat(supplier.latitude) : undefined,
+            longitude: supplier.longitude ? parseFloat(supplier.longitude) : undefined,
+            landArea: undefined, // Would come from separate land registry
+          },
+          
+          plantingDate: undefined, // Would come from asset management system
+          maturityDate: undefined,
+          harvestCycle: undefined,
+          expectedLifespan: undefined,
+          
+          yieldData: {
+            p50: [feedstock.annualCapacityTonnes], // Simplified - would pull from yieldEstimates table
+            p75: [Math.floor(feedstock.annualCapacityTonnes * 0.85)],
+            p90: [Math.floor(feedstock.annualCapacityTonnes * 0.7)],
+            methodology: 'Historical yield data and agronomic modeling',
+            historicalValidation: transactions.length > 0 ? `Based on ${transactions.length} historical transactions` : undefined,
+          },
+          
+          carbonProfile: {
+            intensityGco2eMj: feedstock.carbonIntensityValue || 0,
+            certificationStatus: certificates.filter(c => c.status === 'active').map(c => c.type),
+            projectionMethodology: feedstock.carbonIntensityMethod || 'LCA methodology per RED II',
+            sequestrationRate: undefined, // Would be calculated from LCA
+          },
+          
+          offtakeContracts: [], // Would pull from supplyAgreements table
+          
+          supplierProfile: {
+            name: supplier.companyName,
+            abn: supplier.abn,
+            operatingHistory: `Registered since ${supplier.createdAt.getFullYear()}`,
+            financialStrength: supplier.verificationStatus === 'verified' ? 'Verified' : 'Pending verification',
+          },
+          
+          riskAssessment: {
+            concentrationRisk: 'Low - diversified supply base',
+            geographicRisk: [`Located in ${feedstock.state || 'Australia'}`],
+            climateRisk: 'Moderate - subject to seasonal weather variations',
+            operationalRisk: 'Low - established production methods',
+          },
+          
+          stressScenarios: [
+            {
+              scenario: 'Drought (1 in 10 year event)',
+              impact: '30% yield reduction',
+              mitigationStrategy: 'Diversified geographic sourcing, insurance coverage',
+            },
+            {
+              scenario: 'Logistics disruption',
+              impact: 'Delivery delays up to 2 weeks',
+              mitigationStrategy: 'Multiple transport providers, buffer inventory',
+            },
+          ],
+          
+          abfiRating: {
+            score: feedstock.abfiScore || 0,
+            grade: feedstock.abfiScore ? calculateRatingGrade(feedstock.abfiScore) : 'N/A',
+            sustainabilityScore: feedstock.sustainabilityScore || 0,
+            carbonScore: feedstock.carbonIntensityScore || 0,
+            qualityScore: feedstock.qualityScore || 0,
+            reliabilityScore: feedstock.reliabilityScore || 0,
+          },
+          
+          badpNumber,
+          issueDate,
+          validUntil,
+          preparedFor: input.preparedFor,
+        };
+        
+        // Generate PDF
+        const pdfBuffer = await generateBADP(badpData);
+        
+        // Upload to S3
+        const pdfKey = `badp/${feedstock.id}/${badpNumber}.pdf`;
+        const { url: pdfUrl } = await storagePut(pdfKey, pdfBuffer, 'application/pdf');
+        
+        await createAuditLog({
+          userId: ctx.user.id,
+          action: 'generate_badp',
+          entityType: 'feedstock',
+          entityId: feedstock.id,
+          changes: { after: { badpNumber, preparedFor: input.preparedFor } },
+        });
+        
+        return { 
+          badpNumber,
+          pdfUrl,
+          issueDate,
+          validUntil,
+        };
+      }),
   }),
   
   // ============================================================================

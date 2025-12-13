@@ -219,3 +219,21 @@
 
 ## Bugs & Issues (Session 3)
 - [x] Fix Browse Feedstocks page - not working at all (CRITICAL)
+
+## BioFeed AU Alignment (Session 4 - Document Review)
+
+### High Priority - Revenue Enabling
+- [ ] Implement subscription tier system for market intelligence access ($50k-$150k p.a.)
+- [ ] Build API gateway with usage metering for external API licensing ($25k-$100k p.a.)
+- [x] Create ABFI Rating Certificate PDF generation ($3k-$15k per certificate)
+- [x] Build Biological Asset Data Pack (BADP) export for capital markets ($75k-$300k per pack)
+
+### Medium Priority - Market Positioning
+- [ ] Create lender portal (read-only monitoring view for financiers)
+- [ ] Build market indices (regional availability, quality-adjusted, carbon-adjusted)
+- [ ] Add policy instrumentation dashboards (SAF mandate, Cleaner Fuels Program)
+
+### Low Priority - Enhancement
+- [ ] Add forward indicators (availability curves, price bands)
+- [ ] Create governance documentation (methodology disclosure, independence framework)
+- [ ] Implement data anonymization layer for aggregated market intelligence

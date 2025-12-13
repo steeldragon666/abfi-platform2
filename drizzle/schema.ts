@@ -203,6 +203,12 @@ export const certificates = mysqlTable("certificates", {
   documentUrl: varchar("documentUrl", { length: 500 }),
   documentKey: varchar("documentKey", { length: 500 }), // S3 key
   
+  // ABFI Certificate specific fields
+  ratingGrade: varchar("ratingGrade", { length: 10 }), // A+, A, B+, etc.
+  assessmentDate: timestamp("assessmentDate"),
+  certificatePdfUrl: varchar("certificatePdfUrl", { length: 500 }),
+  certificatePdfKey: varchar("certificatePdfKey", { length: 500 }), // S3 key for generated PDF
+  
   // Verification
   verifiedAt: timestamp("verifiedAt"),
   verifiedBy: int("verifiedBy").references(() => users.id),

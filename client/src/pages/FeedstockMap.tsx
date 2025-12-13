@@ -44,6 +44,15 @@ export default function FeedstockMap() {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [savedAnalysisName, setSavedAnalysisName] = useState("");
   const [savedAnalysisDescription, setSavedAnalysisDescription] = useState("");
+  const [showSavedAnalyses, setShowSavedAnalyses] = useState(false);
+
+  // Fetch saved analyses
+  const { data: savedAnalyses, refetch: refetchSavedAnalyses } = trpc.savedAnalyses.list.useQuery();
+  const deleteAnalysisMutation = trpc.savedAnalyses.delete.useMutation({
+    onSuccess: () => {
+      refetchSavedAnalyses();
+    },
+  });
   
   const [layers, setLayers] = useState<LayerConfig[]>([
     { id: "sugar-mills", name: "Sugar Mills", type: "circle", source: "/geojson/sugar_mills.json", color: "#8B4513", visible: true },
@@ -467,6 +476,7 @@ export default function FeedstockMap() {
       setShowSaveDialog(false);
       setSavedAnalysisName("");
       setSavedAnalysisDescription("");
+      refetchSavedAnalyses();
     },
     onError: (error) => {
       alert(`Failed to save analysis: ${error.message}`);
@@ -503,6 +513,95 @@ export default function FeedstockMap() {
         } as Record<string, { min: number; max: number }>,
       },
     });
+  };
+
+  // Load saved analysis
+  const handleLoadAnalysis = (analysis: any) => {
+    if (!map.current) return;
+
+    // Clear existing radius
+    clearRadius();
+
+    // Parse coordinates
+    const centerLat = parseFloat(analysis.centerLat);
+    const centerLng = parseFloat(analysis.centerLng);
+    const center: [number, number] = [centerLng, centerLat];
+
+    // Set state
+    setRadiusCenter(center);
+    setRadiusKm(analysis.radiusKm);
+    setAnalysisResults(analysis.results);
+
+    // Restore filter state if available
+    if (analysis.filterState) {
+      setSelectedStates(analysis.filterState.selectedStates);
+      
+      // Update layer visibility
+      setLayers(prev => prev.map(layer => ({
+        ...layer,
+        visible: analysis.filterState.visibleLayers.includes(layer.id)
+      })));
+
+      // Restore capacity ranges
+      const ranges = analysis.filterState.capacityRanges;
+      if (ranges['sugar-mills']) setSugarMillCapacity([ranges['sugar-mills'].min, ranges['sugar-mills'].max]);
+      if (ranges['biogas-facilities']) setBiogasCapacity([ranges['biogas-facilities'].min, ranges['biogas-facilities'].max]);
+      if (ranges['biofuel-plants']) setBiofuelCapacity([ranges['biofuel-plants'].min, ranges['biofuel-plants'].max]);
+      if (ranges['transport-infrastructure']) setPortThroughput([ranges['transport-infrastructure'].min, ranges['transport-infrastructure'].max]);
+    }
+
+    // Center map on analysis location
+    map.current.flyTo({
+      center: center,
+      zoom: 9,
+      duration: 1500
+    });
+
+    // Draw radius circle
+    setTimeout(() => {
+      if (!map.current) return;
+
+      const radiusInMeters = analysis.radiusKm * 1000;
+      const circleGeoJSON = {
+        type: "Feature" as const,
+        geometry: {
+          type: "Point" as const,
+          coordinates: center
+        },
+        properties: {}
+      };
+
+      if (map.current.getSource("radius-circle")) {
+        (map.current.getSource("radius-circle") as mapboxgl.GeoJSONSource).setData(circleGeoJSON);
+      } else {
+        map.current.addSource("radius-circle", {
+          type: "geojson",
+          data: circleGeoJSON
+        });
+
+        map.current.addLayer({
+          id: "radius-circle",
+          type: "circle",
+          source: "radius-circle",
+          paint: {
+            "circle-radius": {
+              stops: [
+                [0, 0],
+                [20, radiusInMeters * 0.075]
+              ],
+              base: 2
+            },
+            "circle-color": "#3b82f6",
+            "circle-opacity": 0.1,
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#3b82f6",
+            "circle-stroke-opacity": 0.8
+          }
+        });
+      }
+    }, 1600);
+
+    setShowSavedAnalyses(false);
   };
 
   // Clear radius and analysis
