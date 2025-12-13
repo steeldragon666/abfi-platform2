@@ -28,6 +28,8 @@ import QualityTestUpload from "./pages/QualityTestUpload";
 import SupplyAgreements from "./pages/SupplyAgreements";
 import InquiryResponse from "./pages/InquiryResponse";
 import GrowerQualification from "./pages/GrowerQualification";
+import BankabilityAssessment from "./pages/BankabilityAssessment";
+import LenderPortal from "./pages/LenderPortal";
 
 function Router() {
   return (
@@ -53,6 +55,8 @@ function Router() {
       <Route path="/dashboard/projects/:projectId/agreements" component={SupplyAgreements} />
       <Route path="/inquiries/respond/:inquiryId" component={InquiryResponse} />
       <Route path="/bankability/qualify/:supplierId" component={GrowerQualification} />
+      <Route path="/bankability/assess/:projectId" component={BankabilityAssessment} />
+      <Route path="/lender/portal" component={LenderPortal} />
       <Route path="/map" component={MapView} />
       <Route path="/certificate/upload" component={CertificateUpload} />
       <Route path="/404" component={NotFound} />

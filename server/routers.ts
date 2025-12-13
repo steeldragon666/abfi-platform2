@@ -868,6 +868,11 @@ export const appRouter = router({
         return await db.getProjectsByUserId(ctx.user.id);
       }),
     
+    listProjects: protectedProcedure
+      .query(async ({ ctx }) => {
+        return await db.getProjectsByUserId(ctx.user.id);
+      }),
+    
     getProjectById: protectedProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ ctx, input }) => {
@@ -1037,6 +1042,19 @@ export const appRouter = router({
         operationalReadinessScore: z.number(),
         compositeScore: z.number(),
         rating: z.enum(["AAA", "AA", "A", "BBB", "BB", "B", "CCC"]),
+        ratingDescription: z.string().optional(),
+        tier1Volume: z.number().optional(),
+        tier1Percent: z.number().optional(),
+        tier2Volume: z.number().optional(),
+        tier2Percent: z.number().optional(),
+        optionsVolume: z.number().optional(),
+        optionsPercent: z.number().optional(),
+        rofrVolume: z.number().optional(),
+        rofrPercent: z.number().optional(),
+        totalAgreements: z.number().optional(),
+        strengths: z.array(z.string()).optional(),
+        monitoringItems: z.array(z.string()).optional(),
+        status: z.enum(["draft", "submitted", "under_review", "approved", "rejected"]).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const project = await db.getProjectById(input.projectId);
@@ -1044,7 +1062,11 @@ export const appRouter = router({
           throw new TRPCError({ code: 'FORBIDDEN' });
         }
         
-        const assessmentId = await db.createBankabilityAssessment(input);
+        const assessmentData = {
+          ...input,
+          assessedBy: ctx.user.id,
+        };
+        const assessmentId = await db.createBankabilityAssessment(assessmentData);
         
         await createAuditLog({
           userId: ctx.user.id,

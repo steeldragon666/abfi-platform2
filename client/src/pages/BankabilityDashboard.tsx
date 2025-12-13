@@ -215,10 +215,12 @@ export default function BankabilityDashboard() {
                       <Users className="h-4 w-4 mr-2" />
                       Manage Suppliers
                     </Button>
-                    <Button variant="outline" size="sm">
-                      <TrendingUp className="h-4 w-4 mr-2" />
-                      Run Assessment
-                    </Button>
+                    <Link href={`/bankability/assess/${project.id}`}>
+                      <Button variant="outline" size="sm">
+                        <TrendingUp className="h-4 w-4 mr-2" />
+                        Run Assessment
+                      </Button>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>

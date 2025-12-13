@@ -136,7 +136,7 @@
     - [x] Create agreement CRUD interface
 - [ ] Build concentration analysis view with HHI and geographic distribution
 - [x] Implement grower qualification assessment workflow
-- [ ] Create bankability assessment wizard
+- [x] Create bankability assessment wizard
 - [ ] Build certificate generator (PDF with QR code)
 - [ ] Create lender portal (read-only monitoring view)
 - [ ] Implement alert system for contract renewals and covenant breaches
