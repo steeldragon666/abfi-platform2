@@ -34,7 +34,7 @@
 - [ ] Add location picker with map integration
 - [x] Build document upload system with S3
 - [x] Create certificate management interface
-- [ ] Add quality test report upload
+- [x] Add quality test report upload
 - [ ] Build availability calendar
 - [x] Implement feedstock list/grid view for suppliers
 - [ ] Add feedstock detail/edit page
@@ -76,7 +76,8 @@
 - [x] Build inquiry list for buyers
 - [ ] Add inquiry response interface
 - [x] Implement status tracking
-- [ ] Create notification system integration center
+- [x] Create notification system integration
+- [x] Build notification center UI center
 - [ ] Create communication history view
 - [ ] Add inquiry status tracking
 - [ ] Implement notification preferences

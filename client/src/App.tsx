@@ -20,6 +20,8 @@ import BuyerInquiries from "./pages/BuyerInquiries";
 import SupplierFeedstocks from "./pages/SupplierFeedstocks";
 import BankabilityDashboard from "./pages/BankabilityDashboard";
 import SavedSearches from "./pages/SavedSearches";
+import Notifications from "./pages/Notifications";
+import QualityTestUpload from "./pages/QualityTestUpload";
 
 function Router() {
   return (
@@ -37,6 +39,8 @@ function Router() {
       <Route path="/supplier/feedstocks" component={SupplierFeedstocks} />
       <Route path="/bankability" component={BankabilityDashboard} />
       <Route path="/saved-searches" component={SavedSearches} />
+      <Route path="/notifications" component={Notifications} />
+      <Route path="/quality-test/upload" component={QualityTestUpload} />
       <Route path="/map" component={MapView} />
       <Route path="/certificate/upload" component={CertificateUpload} />
       <Route path="/404" component={NotFound} />
