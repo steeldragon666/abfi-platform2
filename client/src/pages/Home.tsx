@@ -18,7 +18,7 @@ export default function Home() {
             <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
               <Leaf className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold text-primary" style={{ fontFamily: 'Playfair Display, serif' }}>ABFI</span>
+            <span className="text-2xl font-bold text-primary" style={{ fontFamily: 'Montserrat, sans-serif' }}>ABFI</span>
           </div>
           <nav className="flex items-center gap-6">
             <Link href="/browse">
@@ -40,42 +40,45 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero Section - Inspired by mockup with organic texture */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-green-50 via-amber-50/30 to-green-50 py-24">
-        {/* Organic texture overlay */}
-        <div className="absolute inset-0 opacity-10">
+      {/* Hero Section - BioFeed AU Navy Blue Background */}
+      <section className="relative overflow-hidden bg-[#0F3A5C] py-24">
+        {/* Circuit pattern overlay */}
+        <div className="absolute inset-0 opacity-5">
           <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <pattern id="organic-pattern" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
-                <path d="M20,50 Q30,30 50,40 T80,50" stroke="#1B4332" strokeWidth="0.5" fill="none" opacity="0.3"/>
-                <path d="M10,70 Q40,60 60,75 T90,80" stroke="#DAA520" strokeWidth="0.5" fill="none" opacity="0.3"/>
+              <pattern id="circuit-pattern" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
+                <path d="M10,10 h20 v20 h-20 z M70,10 h20 v20 h-20 z M10,70 h20 v20 h-20 z M70,70 h20 v20 h-20 z" stroke="#F4C430" strokeWidth="1" fill="none"/>
+                <line x1="30" y1="20" x2="70" y2="20" stroke="#F4C430" strokeWidth="1"/>
+                <line x1="30" y1="80" x2="70" y2="80" stroke="#F4C430" strokeWidth="1"/>
+                <line x1="20" y1="30" x2="20" y2="70" stroke="#F4C430" strokeWidth="1"/>
+                <line x1="80" y1="30" x2="80" y2="70" stroke="#F4C430" strokeWidth="1"/>
               </pattern>
             </defs>
-            <rect width="100%" height="100%" fill="url(#organic-pattern)" />
+            <rect width="100%" height="100%" fill="url(#circuit-pattern)" />
           </svg>
         </div>
         
         <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-4xl">
             <h1 className="text-6xl md:text-7xl font-bold mb-6 leading-tight">
-              <span className="text-primary">Australian</span>
+              <span className="text-white">Australian</span>
               <br />
-              <span className="text-[#DAA520]">Biofuel Feedstock</span>
+              <span className="text-[#F4C430]">Biofuel Feedstock</span>
               <br />
-              <span className="text-primary">Index</span>
+              <span className="text-white">Index</span>
             </h1>
-            <p className="text-xl text-gray-700 mb-8 max-w-2xl leading-relaxed">
-              Your trusted source for sustainable energy data.
+            <p className="text-xl text-white/90 mb-8 max-w-2xl leading-relaxed">
+              Evidence-Backed Feedstock Infrastructure for Australia's Bioenergy Transition
             </p>
             <div className="flex gap-4 mb-12">
               <Link href="/browse">
-                <Button size="lg" className="text-lg px-8 py-6 bg-primary hover:bg-primary/90 shadow-lg">
+                <Button size="lg" className="text-lg px-8 py-6 bg-[#F4C430] hover:bg-[#F4C430]/90 text-[#0F3A5C] font-semibold shadow-lg">
                   Browse Feedstocks
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
               <Link href="/feedstock-map">
-                <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-2 border-primary text-primary hover:bg-primary/5">
+                <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-2 border-[#F4C430] text-white hover:bg-[#F4C430]/10">
                   Interactive Map
                 </Button>
               </Link>
@@ -84,10 +87,10 @@ export default function Home() {
 
           {/* Floating metric cards - inspired by mockup */}
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mt-12">
-            <Card className="border-2 border-[#DAA520]/20 shadow-lg hover:shadow-xl transition-shadow bg-white/90 backdrop-blur">
+            <Card className="border-2 border-[#F4C430] shadow-lg hover:shadow-xl transition-shadow bg-white/90 backdrop-blur">
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <TrendingUp className="h-4 w-4 text-[#DAA520]" />
+                  <TrendingUp className="h-4 w-4 text-[#F4C430]" />
                   Weekly Index
                 </div>
               </CardHeader>
@@ -97,10 +100,10 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="border-2 border-[#DAA520]/20 shadow-lg hover:shadow-xl transition-shadow bg-white/90 backdrop-blur">
+            <Card className="border-2 border-[#F4C430] shadow-lg hover:shadow-xl transition-shadow bg-white/90 backdrop-blur">
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Leaf className="h-4 w-4 text-[#DAA520]" />
+                  <Leaf className="h-4 w-4 text-[#F4C430]" />
                   Sustainability Score
                 </div>
               </CardHeader>
@@ -110,10 +113,10 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="border-2 border-[#DAA520]/20 shadow-lg hover:shadow-xl transition-shadow bg-white/90 backdrop-blur">
+            <Card className="border-2 border-[#F4C430] shadow-lg hover:shadow-xl transition-shadow bg-white/90 backdrop-blur">
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <BarChart3 className="h-4 w-4 text-[#DAA520]" />
+                  <BarChart3 className="h-4 w-4 text-[#F4C430]" />
                   Feedstock Availability
                 </div>
               </CardHeader>
@@ -123,10 +126,10 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <Card className="border-2 border-[#DAA520]/20 shadow-lg hover:shadow-xl transition-shadow bg-white/90 backdrop-blur">
+            <Card className="border-2 border-[#F4C430] shadow-lg hover:shadow-xl transition-shadow bg-white/90 backdrop-blur">
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Zap className="h-4 w-4 text-[#DAA520]" />
+                  <Zap className="h-4 w-4 text-[#F4C430]" />
                   Production Volume
                 </div>
               </CardHeader>
