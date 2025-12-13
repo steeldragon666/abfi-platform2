@@ -66,7 +66,7 @@
 - [x] Add feedstock markers with color-coded ABFI scores
 - [x] Build list view with sorting
 - [ ] Implement pagination
-- [ ] Create saved searches functionality
+- [x] Create saved searches functionality
 - [ ] Add shortlist/favorites system
 - [x] Build feedstock detail page
 
@@ -129,7 +129,8 @@
 - [x] Implement Operational Readiness scoring (10% weight)
 - [x] Build composite bankability score calculator (AAA-CCC rating)
 - [x] Build database helpers for projects, agreements, qualifications
-- [x] Create tRPC routers for bankability moduleier 1, Tier 2, Options, ROFR)
+- [x] Create tRPC routers for bankability module
+- [x] Build project developer dashboard UI
 - [ ] Create agreement CRUD interface
 - [ ] Build concentration analysis view with HHI and geographic distribution
 - [ ] Implement grower qualification assessment workflow
