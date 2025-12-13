@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Layers, Search, Download, Target } from "lucide-react";
 import { createPopupHTML } from "@/lib/popupTemplates";
+import { buildLayerFilter } from "@/lib/mapFilters";
 
 // Mapbox access token (using Manus proxy)
 mapboxgl.accessToken = "pk.eyJ1Ijoic3RlZWxkcmFnb242NjYiLCJhIjoiY21keGFwNmxjMmM1MjJscTM0NHMwMWo5aSJ9.3mvzNah-7rzwxCZ2L81-YA";
@@ -27,7 +28,7 @@ export default function FeedstockMap() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [selectedState, setSelectedState] = useState<string>("all");
+  const [selectedStates, setSelectedStates] = useState<string[]>(["QLD", "NSW", "VIC", "SA", "WA", "TAS"]);
   const [searchQuery, setSearchQuery] = useState("");
   const [radiusCenter, setRadiusCenter] = useState<[number, number] | null>(null);
   
@@ -48,6 +49,38 @@ export default function FeedstockMap() {
     "biofuel-plants": 100,
     "transport-ports": 100,
   });
+
+  // Capacity filters
+  const [sugarMillCapacity, setSugarMillCapacity] = useState<[number, number]>([0, 4000000]);
+  const [biogasCapacity, setBiogasCapacity] = useState<[number, number]>([0, 50]);
+  const [biofuelCapacity, setBiofuelCapacity] = useState<[number, number]>([0, 500]);
+  const [portThroughput, setPortThroughput] = useState<[number, number]>([0, 200]);
+
+  // Apply filters when filter state changes
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+
+    layers.forEach((layer) => {
+      const filter = buildLayerFilter(
+        layer.id,
+        selectedStates,
+        sugarMillCapacity,
+        biogasCapacity,
+        biofuelCapacity,
+        portThroughput
+      );
+
+      // Apply filter to main layer
+      if (map.current!.getLayer(layer.id)) {
+        map.current!.setFilter(layer.id, [...filter, ["!", ["has", "point_count"]]]);
+      }
+
+      // Apply filter to clusters (exclude the point_count filter)
+      if (map.current!.getLayer(`${layer.id}-clusters`)) {
+        map.current!.setFilter(`${layer.id}-clusters`, [["has", "point_count"]]);
+      }
+    });
+  }, [selectedStates, sugarMillCapacity, biogasCapacity, biofuelCapacity, portThroughput, mapLoaded, layers]);
 
   // Initialize map
   useEffect(() => {
@@ -375,6 +408,125 @@ export default function FeedstockMap() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
+            </CardContent>
+          </Card>
+
+          {/* Filters */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Filters</CardTitle>
+              <CardDescription>Refine by location and capacity</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* State Filter */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">States</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {["QLD", "NSW", "VIC", "SA", "WA", "TAS"].map((state) => (
+                    <div key={state} className="flex items-center gap-2">
+                      <Checkbox
+                        checked={selectedStates.includes(state)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedStates([...selectedStates, state]);
+                          } else {
+                            setSelectedStates(selectedStates.filter((s) => s !== state));
+                          }
+                        }}
+                      />
+                      <Label className="text-xs">{state}</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sugar Mill Capacity */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <Label>Sugar Mill Capacity</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {(sugarMillCapacity[0] / 1000).toFixed(0)}-{(sugarMillCapacity[1] / 1000).toFixed(0)}k t
+                  </span>
+                </div>
+                <Slider
+                  value={sugarMillCapacity}
+                  onValueChange={(value) => setSugarMillCapacity(value as [number, number])}
+                  min={0}
+                  max={4000000}
+                  step={100000}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Biogas Capacity */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <Label>Biogas Capacity (MW)</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {biogasCapacity[0]}-{biogasCapacity[1]} MW
+                  </span>
+                </div>
+                <Slider
+                  value={biogasCapacity}
+                  onValueChange={(value) => setBiogasCapacity(value as [number, number])}
+                  min={0}
+                  max={50}
+                  step={1}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Biofuel Capacity */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <Label>Biofuel Capacity (ML/yr)</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {biofuelCapacity[0]}-{biofuelCapacity[1]} ML/yr
+                  </span>
+                </div>
+                <Slider
+                  value={biofuelCapacity}
+                  onValueChange={(value) => setBiofuelCapacity(value as [number, number])}
+                  min={0}
+                  max={500}
+                  step={10}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Port Throughput */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <Label>Port Throughput (MT/yr)</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {portThroughput[0]}-{portThroughput[1]} MT
+                  </span>
+                </div>
+                <Slider
+                  value={portThroughput}
+                  onValueChange={(value) => setPortThroughput(value as [number, number])}
+                  min={0}
+                  max={200}
+                  step={5}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Reset Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  setSelectedStates(["QLD", "NSW", "VIC", "SA", "WA", "TAS"]);
+                  setSugarMillCapacity([0, 4000000]);
+                  setBiogasCapacity([0, 50]);
+                  setBiofuelCapacity([0, 500]);
+                  setPortThroughput([0, 200]);
+                }}
+              >
+                Reset Filters
+              </Button>
             </CardContent>
           </Card>
 

@@ -171,3 +171,13 @@
 - [ ] Implement report export (PDF/CSV)
 - [x] Create compliance dashboard UI
 - [ ] Add automated report distribution (email)
+
+## Map Filtering Enhancement (Session 3)
+- [x] Add state dropdown filter with multi-select (QLD/NSW/VIC/SA/WA/TAS)
+- [x] Implement capacity range sliders for sugar mills (crushing capacity)
+- [x] Implement capacity range sliders for biogas facilities (MW capacity)
+- [x] Implement capacity range sliders for biofuel plants (ML/yr capacity)
+- [x] Implement capacity range sliders for ports (annual throughput)
+- [x] Build filter logic to update map layer visibility
+- [x] Add "Reset Filters" button
+- [ ] Show active filter count badge
