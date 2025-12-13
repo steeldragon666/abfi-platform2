@@ -854,3 +854,186 @@ export const covenantMonitoring = mysqlTable("covenantMonitoring", {
 
 export type CovenantMonitoring = typeof covenantMonitoring.$inferSelect;
 export type InsertCovenantMonitoring = typeof covenantMonitoring.$inferInsert;
+
+// ============================================================================
+// EVIDENCE CHAIN & DATA PROVENANCE
+// ============================================================================
+
+/**
+ * Evidence objects - separate from document blobs
+ * Provides cryptographic integrity, issuer identity, and linkage to scores
+ */
+export const evidence = mysqlTable("evidence", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Evidence classification
+  type: mysqlEnum("type", [
+    "lab_test",
+    "audit_report",
+    "registry_cert",
+    "contract",
+    "insurance_policy",
+    "financial_statement",
+    "land_title",
+    "sustainability_cert",
+    "quality_test",
+    "delivery_record",
+    "other"
+  ]).notNull(),
+  
+  // File integrity
+  fileHash: varchar("fileHash", { length: 64 }).notNull(), // SHA-256 hash
+  fileUrl: varchar("fileUrl", { length: 500 }).notNull(),
+  fileSize: int("fileSize").notNull(), // bytes
+  mimeType: varchar("mimeType", { length: 100 }).notNull(),
+  originalFilename: varchar("originalFilename", { length: 255 }).notNull(),
+  
+  // Issuer identity
+  issuerId: int("issuerId"), // References user ID of issuer
+  issuerType: mysqlEnum("issuerType", [
+    "lab",
+    "auditor",
+    "registry",
+    "counterparty",
+    "supplier",
+    "government",
+    "certification_body",
+    "self_declared"
+  ]).notNull(),
+  issuerName: varchar("issuerName", { length: 255 }).notNull(),
+  issuerCredentials: text("issuerCredentials"), // Accreditation details
+  
+  // Validity period
+  issuedDate: timestamp("issuedDate").notNull(),
+  expiryDate: timestamp("expiryDate"),
+  
+  // Status
+  status: mysqlEnum("status", [
+    "valid",
+    "expired",
+    "revoked",
+    "superseded",
+    "pending_verification"
+  ]).default("valid").notNull(),
+  
+  // Versioning
+  versionNumber: int("versionNumber").default(1).notNull(),
+  supersededById: int("supersededById").references((): any => evidence.id),
+  supersessionReason: text("supersessionReason"),
+  
+  // Metadata (type-specific fields)
+  metadata: json("metadata").$type<{
+    testMethod?: string;
+    standardReference?: string;
+    certificationScheme?: string;
+    sampleId?: string;
+    testResults?: Record<string, any>;
+    [key: string]: any;
+  }>(),
+  
+  // Audit trail
+  uploadedBy: int("uploadedBy").notNull().references(() => users.id),
+  verifiedBy: int("verifiedBy").references(() => users.id),
+  verifiedAt: timestamp("verifiedAt"),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  fileHashIdx: index("evidence_fileHash_idx").on(table.fileHash),
+  statusIdx: index("evidence_status_idx").on(table.status),
+  typeIdx: index("evidence_type_idx").on(table.type),
+  expiryDateIdx: index("evidence_expiryDate_idx").on(table.expiryDate),
+}));
+
+export type Evidence = typeof evidence.$inferSelect;
+export type InsertEvidence = typeof evidence.$inferInsert;
+
+/**
+ * Evidence linkages - connects evidence to entities and scores
+ */
+export const evidenceLinkages = mysqlTable("evidenceLinkages", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  evidenceId: int("evidenceId").notNull().references(() => evidence.id, { onDelete: "cascade" }),
+  
+  // Linked entity
+  linkedEntityType: mysqlEnum("linkedEntityType", [
+    "feedstock",
+    "supplier",
+    "certificate",
+    "abfi_score",
+    "bankability_assessment",
+    "grower_qualification",
+    "supply_agreement",
+    "project"
+  ]).notNull(),
+  linkedEntityId: int("linkedEntityId").notNull(),
+  
+  // Linkage semantics
+  linkageType: mysqlEnum("linkageType", [
+    "supports",
+    "validates",
+    "contradicts",
+    "supersedes",
+    "references"
+  ]).default("supports").notNull(),
+  
+  // Weight in calculation (for score contributions)
+  weightInCalculation: int("weightInCalculation"), // 0-100, null if not used in scoring
+  
+  // Linkage metadata
+  linkedBy: int("linkedBy").notNull().references(() => users.id),
+  linkageNotes: text("linkageNotes"),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  evidenceIdIdx: index("evidenceLinkages_evidenceId_idx").on(table.evidenceId),
+  entityIdx: index("evidenceLinkages_entity_idx").on(table.linkedEntityType, table.linkedEntityId),
+}));
+
+export type EvidenceLinkage = typeof evidenceLinkages.$inferSelect;
+export type InsertEvidenceLinkage = typeof evidenceLinkages.$inferInsert;
+
+/**
+ * Certificate snapshots - immutable evidence and score freeze at issuance
+ */
+export const certificateSnapshots = mysqlTable("certificateSnapshots", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  certificateId: int("certificateId").notNull().references(() => certificates.id),
+  
+  snapshotDate: timestamp("snapshotDate").defaultNow().notNull(),
+  snapshotHash: varchar("snapshotHash", { length: 64 }).notNull(), // SHA-256 of snapshot content
+  
+  // Frozen data at issuance
+  frozenScoreData: json("frozenScoreData").$type<{
+    abfiScore?: number;
+    pillarScores?: Record<string, number>;
+    rating?: string;
+    calculationDate?: string;
+    [key: string]: any;
+  }>().notNull(),
+  
+  // Frozen evidence set (array of evidence IDs with hashes)
+  frozenEvidenceSet: json("frozenEvidenceSet").$type<Array<{
+    evidenceId: number;
+    fileHash: string;
+    type: string;
+    issuedDate: string;
+    issuerName: string;
+  }>>().notNull(),
+  
+  // Immutability flag
+  immutable: boolean("immutable").default(true).notNull(),
+  
+  // Audit
+  createdBy: int("createdBy").notNull().references(() => users.id),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  certificateIdIdx: index("certificateSnapshots_certificateId_idx").on(table.certificateId),
+  snapshotHashIdx: index("certificateSnapshots_snapshotHash_idx").on(table.snapshotHash),
+}));
+
+export type CertificateSnapshot = typeof certificateSnapshots.$inferSelect;
+export type InsertCertificateSnapshot = typeof certificateSnapshots.$inferInsert;

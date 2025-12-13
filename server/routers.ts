@@ -1135,6 +1135,226 @@ export const appRouter = router({
         return await db.getLenderAccessByProjectId(input.projectId);
       }),
   }),
+  
+  // Evidence Chain & Data Provenance
+  evidence: router({
+    // Upload evidence with automatic hashing
+    upload: protectedProcedure
+      .input(z.object({
+        type: z.enum([
+          "lab_test",
+          "audit_report",
+          "registry_cert",
+          "contract",
+          "insurance_policy",
+          "financial_statement",
+          "land_title",
+          "sustainability_cert",
+          "quality_test",
+          "delivery_record",
+          "other"
+        ]),
+        fileUrl: z.string(),
+        fileHash: z.string(),
+        fileSize: z.number(),
+        mimeType: z.string(),
+        originalFilename: z.string(),
+        issuerType: z.enum([
+          "lab",
+          "auditor",
+          "registry",
+          "counterparty",
+          "supplier",
+          "government",
+          "certification_body",
+          "self_declared"
+        ]),
+        issuerName: z.string(),
+        issuerCredentials: z.string().optional(),
+        issuedDate: z.date(),
+        expiryDate: z.date().optional(),
+        metadata: z.record(z.string(), z.any()).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const evidenceId = await db.createEvidence({
+          ...input,
+          uploadedBy: ctx.user.id,
+          status: "valid",
+        });
+        
+        await createAuditLog({
+          userId: ctx.user.id,
+          action: 'upload_evidence',
+          entityType: 'evidence',
+          entityId: evidenceId,
+          changes: { after: input },
+        });
+        
+        return { evidenceId };
+      }),
+    
+    // Get evidence by ID
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getEvidenceById(input.id);
+      }),
+    
+    // Get evidence by entity
+    getByEntity: protectedProcedure
+      .input(z.object({
+        entityType: z.enum([
+          "feedstock",
+          "supplier",
+          "certificate",
+          "abfi_score",
+          "bankability_assessment",
+          "grower_qualification",
+          "supply_agreement",
+          "project"
+        ]),
+        entityId: z.number(),
+      }))
+      .query(async ({ input }) => {
+        return await db.getEvidenceLinkagesByEntity(input.entityType, input.entityId);
+      }),
+    
+    // Get expiring evidence
+    getExpiring: protectedProcedure
+      .input(z.object({ daysAhead: z.number().default(30) }))
+      .query(async ({ input }) => {
+        return await db.getExpiringEvidence(input.daysAhead);
+      }),
+    
+    // Link evidence to entity
+    linkToEntity: protectedProcedure
+      .input(z.object({
+        evidenceId: z.number(),
+        linkedEntityType: z.enum([
+          "feedstock",
+          "supplier",
+          "certificate",
+          "abfi_score",
+          "bankability_assessment",
+          "grower_qualification",
+          "supply_agreement",
+          "project"
+        ]),
+        linkedEntityId: z.number(),
+        linkageType: z.enum(["supports", "validates", "contradicts", "supersedes", "references"]).default("supports"),
+        weightInCalculation: z.number().optional(),
+        linkageNotes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const linkageId = await db.createEvidenceLinkage({
+          ...input,
+          linkedBy: ctx.user.id,
+        });
+        
+        await createAuditLog({
+          userId: ctx.user.id,
+          action: 'link_evidence',
+          entityType: 'evidence_linkage',
+          entityId: linkageId,
+          changes: { after: input },
+        });
+        
+        return { linkageId };
+      }),
+    
+    // Supersede evidence
+    supersede: protectedProcedure
+      .input(z.object({
+        oldEvidenceId: z.number(),
+        newEvidenceId: z.number(),
+        reason: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.supersedeEvidence(input.oldEvidenceId, input.newEvidenceId, input.reason);
+        
+        await createAuditLog({
+          userId: ctx.user.id,
+          action: 'supersede_evidence',
+          entityType: 'evidence',
+          entityId: input.oldEvidenceId,
+          changes: {
+            before: { status: 'valid' },
+            after: { status: 'superseded', supersededById: input.newEvidenceId },
+          },
+        });
+        
+        return { success: true };
+      }),
+    
+    // Verify evidence
+    verify: protectedProcedure
+      .input(z.object({ evidenceId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        // Only admins or auditors can verify evidence
+        if (ctx.user.role !== 'admin' && ctx.user.role !== 'auditor') {
+          throw new TRPCError({ code: 'FORBIDDEN' });
+        }
+        
+        await db.updateEvidence(input.evidenceId, {
+          verifiedBy: ctx.user.id,
+          verifiedAt: new Date(),
+        });
+        
+        await createAuditLog({
+          userId: ctx.user.id,
+          action: 'verify_evidence',
+          entityType: 'evidence',
+          entityId: input.evidenceId,
+          changes: { after: { verifiedBy: ctx.user.id } },
+        });
+        
+        return { success: true };
+      }),
+    
+    // Create certificate snapshot
+    createSnapshot: protectedProcedure
+      .input(z.object({
+        certificateId: z.number(),
+        frozenScoreData: z.record(z.string(), z.any()),
+        frozenEvidenceSet: z.array(z.object({
+          evidenceId: z.number(),
+          fileHash: z.string(),
+          type: z.string(),
+          issuedDate: z.string(),
+          issuerName: z.string(),
+        })),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Calculate snapshot hash
+        const { generateSnapshotHash } = await import('./evidence.js');
+        const snapshotHash = generateSnapshotHash(input.frozenScoreData, input.frozenEvidenceSet);
+        
+        const snapshotId = await db.createCertificateSnapshot({
+          certificateId: input.certificateId,
+          snapshotHash,
+          frozenScoreData: input.frozenScoreData,
+          frozenEvidenceSet: input.frozenEvidenceSet,
+          createdBy: ctx.user.id,
+        });
+        
+        await createAuditLog({
+          userId: ctx.user.id,
+          action: 'create_certificate_snapshot',
+          entityType: 'certificate_snapshot',
+          entityId: snapshotId,
+          changes: { after: { certificateId: input.certificateId, snapshotHash } },
+        });
+        
+        return { snapshotId, snapshotHash };
+      }),
+    
+    // Get certificate snapshots
+    getSnapshotsByCertificate: protectedProcedure
+      .input(z.object({ certificateId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getCertificateSnapshotsByCertificate(input.certificateId);
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

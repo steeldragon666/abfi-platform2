@@ -30,6 +30,7 @@ import InquiryResponse from "./pages/InquiryResponse";
 import GrowerQualification from "./pages/GrowerQualification";
 import BankabilityAssessment from "./pages/BankabilityAssessment";
 import LenderPortal from "./pages/LenderPortal";
+import EvidenceManagement from "./pages/EvidenceManagement";
 
 function Router() {
   return (
@@ -57,6 +58,7 @@ function Router() {
       <Route path="/bankability/qualify/:supplierId" component={GrowerQualification} />
       <Route path="/bankability/assess/:projectId" component={BankabilityAssessment} />
       <Route path="/lender/portal" component={LenderPortal} />
+      <Route path="/admin/evidence" component={EvidenceManagement} />
       <Route path="/map" component={MapView} />
       <Route path="/certificate/upload" component={CertificateUpload} />
       <Route path="/404" component={NotFound} />

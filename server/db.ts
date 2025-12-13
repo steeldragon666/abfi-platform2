@@ -11,7 +11,10 @@ import {
   transactions, InsertTransaction,
   notifications, InsertNotification,
   savedSearches, InsertSavedSearch,
-  auditLogs, InsertAuditLog
+  auditLogs, InsertAuditLog,
+  evidence, InsertEvidence,
+  evidenceLinkages, InsertEvidenceLinkage,
+  certificateSnapshots, InsertCertificateSnapshot
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -779,4 +782,163 @@ export async function updateCovenantMonitoring(id: number, updates: Partial<Inse
   if (!db) throw new Error("Database not available");
   
   await db.update(covenantMonitoring).set(updates).where(eq(covenantMonitoring.id, id));
+}
+
+// ============================================================================
+// EVIDENCE CHAIN & DATA PROVENANCE
+// ============================================================================
+
+export async function createEvidence(evidenceData: InsertEvidence): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(evidence).values(evidenceData);
+  return Number(result[0].insertId);
+}
+
+export async function getEvidenceById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const results = await db.select().from(evidence).where(eq(evidence.id, id));
+  return results[0] || null;
+}
+
+export async function getEvidenceByHash(fileHash: string) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const results = await db.select().from(evidence).where(eq(evidence.fileHash, fileHash));
+  return results[0] || null;
+}
+
+export async function getEvidenceByStatus(status: any) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(evidence)
+    .where(eq(evidence.status, status))
+    .orderBy(desc(evidence.createdAt));
+}
+
+export async function getEvidenceByType(type: any) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(evidence)
+    .where(eq(evidence.type, type))
+    .orderBy(desc(evidence.createdAt));
+}
+
+export async function getExpiringEvidence(daysAhead: number = 30) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const futureDate = new Date();
+  futureDate.setDate(futureDate.getDate() + daysAhead);
+  
+  return await db.select().from(evidence)
+    .where(
+      and(
+        eq(evidence.status, "valid"),
+        lte(evidence.expiryDate, futureDate)
+      )
+    )
+    .orderBy(evidence.expiryDate);
+}
+
+export async function updateEvidence(id: number, updates: Partial<InsertEvidence>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(evidence).set(updates).where(eq(evidence.id, id));
+}
+
+export async function supersedeEvidence(oldEvidenceId: number, newEvidenceId: number, reason: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(evidence).set({
+    status: "superseded",
+    supersededById: newEvidenceId,
+    supersessionReason: reason,
+  }).where(eq(evidence.id, oldEvidenceId));
+}
+
+// Evidence Linkages
+export async function createEvidenceLinkage(linkage: InsertEvidenceLinkage): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(evidenceLinkages).values(linkage);
+  return Number(result[0].insertId);
+}
+
+export async function getEvidenceLinkagesByEvidence(evidenceId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(evidenceLinkages)
+    .where(eq(evidenceLinkages.evidenceId, evidenceId));
+}
+
+export async function getEvidenceLinkagesByEntity(entityType: any, entityId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select({
+    linkage: evidenceLinkages,
+    evidence: evidence,
+  })
+  .from(evidenceLinkages)
+  .leftJoin(evidence, eq(evidenceLinkages.evidenceId, evidence.id))
+  .where(
+    and(
+      eq(evidenceLinkages.linkedEntityType, entityType),
+      eq(evidenceLinkages.linkedEntityId, entityId)
+    )
+  );
+}
+
+export async function deleteEvidenceLinkage(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(evidenceLinkages).where(eq(evidenceLinkages.id, id));
+}
+
+// Certificate Snapshots
+export async function createCertificateSnapshot(snapshot: InsertCertificateSnapshot): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(certificateSnapshots).values(snapshot);
+  return Number(result[0].insertId);
+}
+
+export async function getCertificateSnapshotById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const results = await db.select().from(certificateSnapshots)
+    .where(eq(certificateSnapshots.id, id));
+  return results[0] || null;
+}
+
+export async function getCertificateSnapshotsByCertificate(certificateId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(certificateSnapshots)
+    .where(eq(certificateSnapshots.certificateId, certificateId))
+    .orderBy(desc(certificateSnapshots.snapshotDate));
+}
+
+export async function getCertificateSnapshotByHash(snapshotHash: string) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const results = await db.select().from(certificateSnapshots)
+    .where(eq(certificateSnapshots.snapshotHash, snapshotHash));
+  return results[0] || null;
 }
