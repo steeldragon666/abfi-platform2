@@ -25,7 +25,10 @@ import {
   carbonPractices, InsertCarbonPractice,
   existingContracts, InsertExistingContract,
   marketplaceListings, InsertMarketplaceListing,
-  financialInstitutions, InsertFinancialInstitution
+  financialInstitutions, InsertFinancialInstitution,
+  demandSignals, InsertDemandSignal,
+  supplierResponses, InsertSupplierResponse,
+  platformTransactions, InsertPlatformTransaction
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1308,4 +1311,143 @@ export async function updateFinancialInstitution(id: number, data: Partial<Inser
     .update(financialInstitutions)
     .set(data)
     .where(eq(financialInstitutions.id, id));
+}
+
+
+// ============================================================================
+// DEMAND SIGNAL REGISTRY
+// ============================================================================
+
+export async function createDemandSignal(signal: InsertDemandSignal) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(demandSignals).values(signal);
+  return Number((result as any).insertId);
+}
+
+export async function getDemandSignalById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(demandSignals).where(eq(demandSignals.id, id)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getAllDemandSignals(filters?: {
+  status?: string;
+  feedstockType?: string;
+  deliveryState?: string;
+  buyerId?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  let query = db.select().from(demandSignals);
+  
+  const conditions = [];
+  if (filters?.status) conditions.push(eq(demandSignals.status, filters.status as any));
+  if (filters?.feedstockType) conditions.push(eq(demandSignals.feedstockType, filters.feedstockType));
+  if (filters?.deliveryState) conditions.push(eq(demandSignals.deliveryState, filters.deliveryState as any));
+  if (filters?.buyerId) conditions.push(eq(demandSignals.buyerId, filters.buyerId));
+  
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+  
+  return await query.orderBy(desc(demandSignals.createdAt));
+}
+
+export async function updateDemandSignal(id: number, updates: Partial<InsertDemandSignal>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(demandSignals).set(updates).where(eq(demandSignals.id, id));
+}
+
+export async function incrementDemandSignalViewCount(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(demandSignals)
+    .set({ viewCount: sql`${demandSignals.viewCount} + 1` })
+    .where(eq(demandSignals.id, id));
+}
+
+export async function createSupplierResponse(response: InsertSupplierResponse) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(supplierResponses).values(response);
+  
+  // Increment response count on demand signal
+  await db.update(demandSignals)
+    .set({ responseCount: sql`${demandSignals.responseCount} + 1` })
+    .where(eq(demandSignals.id, response.demandSignalId));
+  
+  return Number((result as any).insertId);
+}
+
+export async function getSupplierResponseById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(supplierResponses).where(eq(supplierResponses.id, id)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getResponsesByDemandSignal(demandSignalId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select()
+    .from(supplierResponses)
+    .where(eq(supplierResponses.demandSignalId, demandSignalId))
+    .orderBy(desc(supplierResponses.matchScore), desc(supplierResponses.createdAt));
+}
+
+export async function getResponsesBySupplierId(supplierId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select()
+    .from(supplierResponses)
+    .where(eq(supplierResponses.supplierId, supplierId))
+    .orderBy(desc(supplierResponses.createdAt));
+}
+
+export async function updateSupplierResponse(id: number, updates: Partial<InsertSupplierResponse>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(supplierResponses).set(updates).where(eq(supplierResponses.id, id));
+}
+
+export async function createPlatformTransaction(transaction: InsertPlatformTransaction) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(platformTransactions).values(transaction);
+  return Number((result as any).insertId);
+}
+
+export async function getPlatformTransactionById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(platformTransactions).where(eq(platformTransactions.id, id)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getTransactionsByBuyer(buyerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select()
+    .from(platformTransactions)
+    .where(eq(platformTransactions.buyerId, buyerId))
+    .orderBy(desc(platformTransactions.createdAt));
+}
+
+export async function getPlatformTransactionsBySupplierId(supplierId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select()
+    .from(platformTransactions)
+    .where(eq(platformTransactions.supplierId, supplierId))
+    .orderBy(desc(platformTransactions.createdAt));
+}
+
+export async function updatePlatformTransaction(id: number, updates: Partial<InsertPlatformTransaction>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(platformTransactions).set(updates).where(eq(platformTransactions.id, id));
 }

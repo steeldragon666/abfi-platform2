@@ -2427,3 +2427,234 @@ export const financialInstitutions = mysqlTable("financialInstitutions", {
 
 export type FinancialInstitution = typeof financialInstitutions.$inferSelect;
 export type InsertFinancialInstitution = typeof financialInstitutions.$inferInsert;
+
+// ============================================================================
+// DEMAND SIGNAL REGISTRY (RFQ/Matching System)
+// ============================================================================
+
+export const demandSignals = mysqlTable("demandSignals", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  buyerId: int("buyerId").notNull().references(() => buyers.id),
+  userId: int("userId").notNull().references(() => users.id),
+  
+  // Signal metadata
+  signalNumber: varchar("signalNumber", { length: 50 }).notNull().unique(), // ABFI-DS-YYYY-NNNNN
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  
+  // Feedstock requirements
+  feedstockType: varchar("feedstockType", { length: 100 }).notNull(),
+  feedstockCategory: mysqlEnum("feedstockCategory", [
+    "agricultural_residue",
+    "forestry_residue",
+    "energy_crop",
+    "organic_waste",
+    "algae_aquatic",
+    "mixed"
+  ]).notNull(),
+  
+  // Volume requirements
+  annualVolume: int("annualVolume").notNull(), // tonnes per annum
+  volumeFlexibility: int("volumeFlexibility"), // % flexibility (e.g., ±10%)
+  deliveryFrequency: mysqlEnum("deliveryFrequency", [
+    "continuous",
+    "weekly",
+    "fortnightly",
+    "monthly",
+    "quarterly",
+    "seasonal",
+    "spot"
+  ]).notNull(),
+  
+  // Quality requirements
+  minMoistureContent: int("minMoistureContent"), // %
+  maxMoistureContent: int("maxMoistureContent"), // %
+  minEnergyContent: int("minEnergyContent"), // MJ/kg
+  maxAshContent: int("maxAshContent"), // %
+  maxChlorineContent: int("maxChlorineContent"), // ppm
+  otherQualitySpecs: text("otherQualitySpecs"),
+  
+  // Delivery requirements
+  deliveryLocation: varchar("deliveryLocation", { length: 255 }).notNull(),
+  deliveryState: mysqlEnum("deliveryState", ["NSW", "VIC", "QLD", "SA", "WA", "TAS", "NT", "ACT"]),
+  deliveryLatitude: varchar("deliveryLatitude", { length: 20 }),
+  deliveryLongitude: varchar("deliveryLongitude", { length: 20 }),
+  maxTransportDistance: int("maxTransportDistance"), // km
+  deliveryMethod: mysqlEnum("deliveryMethod", [
+    "ex_farm",
+    "delivered",
+    "fob_port",
+    "negotiable"
+  ]).notNull(),
+  
+  // Pricing
+  indicativePriceMin: int("indicativePriceMin"), // AUD per tonne
+  indicativePriceMax: int("indicativePriceMax"), // AUD per tonne
+  pricingMechanism: mysqlEnum("pricingMechanism", [
+    "fixed",
+    "indexed",
+    "spot",
+    "negotiable"
+  ]).notNull(),
+  
+  // Timeline
+  supplyStartDate: timestamp("supplyStartDate").notNull(),
+  supplyEndDate: timestamp("supplyEndDate"),
+  contractTerm: int("contractTerm"), // years
+  responseDeadline: timestamp("responseDeadline").notNull(),
+  
+  // Certification requirements
+  requiredCertifications: json("requiredCertifications").$type<string[]>(),
+  sustainabilityRequirements: text("sustainabilityRequirements"),
+  
+  // Status
+  status: mysqlEnum("status", [
+    "draft",
+    "published",
+    "closed",
+    "awarded",
+    "cancelled"
+  ]).default("draft").notNull(),
+  
+  // Visibility
+  isPublic: boolean("isPublic").default(true).notNull(), // Show to all suppliers
+  targetSuppliers: json("targetSuppliers").$type<number[]>(), // Specific supplier IDs if private
+  
+  // Pricing
+  listingFee: int("listingFee"), // AUD paid by buyer to post
+  listingFeePaid: boolean("listingFeePaid").default(false).notNull(),
+  
+  // Metrics
+  viewCount: int("viewCount").default(0).notNull(),
+  responseCount: int("responseCount").default(0).notNull(),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  publishedAt: timestamp("publishedAt"),
+  closedAt: timestamp("closedAt"),
+}, (table) => ({
+  buyerIdIdx: index("demandSignals_buyerId_idx").on(table.buyerId),
+  statusIdx: index("demandSignals_status_idx").on(table.status),
+  feedstockTypeIdx: index("demandSignals_feedstockType_idx").on(table.feedstockType),
+  deliveryStateIdx: index("demandSignals_deliveryState_idx").on(table.deliveryState),
+  responseDeadlineIdx: index("demandSignals_responseDeadline_idx").on(table.responseDeadline),
+}));
+
+export type DemandSignal = typeof demandSignals.$inferSelect;
+export type InsertDemandSignal = typeof demandSignals.$inferInsert;
+
+export const supplierResponses = mysqlTable("supplierResponses", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  demandSignalId: int("demandSignalId").notNull().references(() => demandSignals.id),
+  supplierId: int("supplierId").notNull().references(() => suppliers.id),
+  userId: int("userId").notNull().references(() => users.id),
+  
+  // Response metadata
+  responseNumber: varchar("responseNumber", { length: 50 }).notNull().unique(), // ABFI-SR-YYYY-NNNNN
+  
+  // Proposed supply
+  proposedVolume: int("proposedVolume").notNull(), // tonnes per annum
+  proposedPrice: int("proposedPrice").notNull(), // AUD per tonne
+  proposedDeliveryMethod: varchar("proposedDeliveryMethod", { length: 100 }),
+  proposedStartDate: timestamp("proposedStartDate").notNull(),
+  proposedContractTerm: int("proposedContractTerm"), // years
+  
+  // Supplier message
+  coverLetter: text("coverLetter"),
+  
+  // Linked resources
+  linkedFeedstocks: json("linkedFeedstocks").$type<number[]>(), // Feedstock IDs
+  linkedCertificates: json("linkedCertificates").$type<number[]>(), // Certificate IDs
+  linkedEvidence: json("linkedEvidence").$type<number[]>(), // Evidence IDs
+  
+  // Matching score (calculated by system)
+  matchScore: int("matchScore"), // 0-100
+  matchReasons: json("matchReasons").$type<string[]>(),
+  
+  // Status
+  status: mysqlEnum("status", [
+    "submitted",
+    "shortlisted",
+    "rejected",
+    "accepted",
+    "withdrawn"
+  ]).default("submitted").notNull(),
+  
+  // Buyer actions
+  viewedByBuyer: boolean("viewedByBuyer").default(false).notNull(),
+  viewedAt: timestamp("viewedAt"),
+  buyerNotes: text("buyerNotes"),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  demandSignalIdIdx: index("supplierResponses_demandSignalId_idx").on(table.demandSignalId),
+  supplierIdIdx: index("supplierResponses_supplierId_idx").on(table.supplierId),
+  statusIdx: index("supplierResponses_status_idx").on(table.status),
+  matchScoreIdx: index("supplierResponses_matchScore_idx").on(table.matchScore),
+}));
+
+export type SupplierResponse = typeof supplierResponses.$inferSelect;
+export type InsertSupplierResponse = typeof supplierResponses.$inferInsert;
+
+export const platformTransactions = mysqlTable("platformTransactions", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Parties
+  buyerId: int("buyerId").notNull().references(() => buyers.id),
+  supplierId: int("supplierId").notNull().references(() => suppliers.id),
+  
+  // Source
+  demandSignalId: int("demandSignalId").references(() => demandSignals.id),
+  supplierResponseId: int("supplierResponseId").references(() => supplierResponses.id),
+  supplyAgreementId: int("supplyAgreementId").references(() => supplyAgreements.id),
+  
+  // Transaction metadata
+  transactionNumber: varchar("transactionNumber", { length: 50 }).notNull().unique(), // ABFI-TXN-YYYY-NNNNN
+  transactionType: mysqlEnum("transactionType", [
+    "offtake_agreement",
+    "spot_purchase",
+    "listing_fee",
+    "verification_fee",
+    "subscription_fee",
+    "assessment_fee"
+  ]).notNull(),
+  
+  // Financial details
+  contractValue: int("contractValue"), // AUD total contract value
+  annualVolume: int("annualVolume"), // tonnes per annum
+  platformFeePercent: varchar("platformFeePercent", { length: 10 }), // e.g., "0.5%"
+  platformFeeAmount: int("platformFeeAmount"), // AUD
+  
+  // Status
+  status: mysqlEnum("status", [
+    "pending",
+    "confirmed",
+    "completed",
+    "disputed",
+    "cancelled"
+  ]).default("pending").notNull(),
+  
+  // Payment tracking
+  invoiceIssued: boolean("invoiceIssued").default(false).notNull(),
+  invoiceIssuedAt: timestamp("invoiceIssuedAt"),
+  paymentReceived: boolean("paymentReceived").default(false).notNull(),
+  paymentReceivedAt: timestamp("paymentReceivedAt"),
+  
+  // Audit
+  confirmedBy: int("confirmedBy").references(() => users.id),
+  confirmedAt: timestamp("confirmedAt"),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  buyerIdIdx: index("platformTransactions_buyerId_idx").on(table.buyerId),
+  supplierIdIdx: index("platformTransactions_supplierId_idx").on(table.supplierId),
+  statusIdx: index("platformTransactions_status_idx").on(table.status),
+  transactionTypeIdx: index("platformTransactions_transactionType_idx").on(table.transactionType),
+}));
+
+export type PlatformTransaction = typeof platformTransactions.$inferSelect;
+export type InsertPlatformTransaction = typeof platformTransactions.$inferInsert;

@@ -548,3 +548,70 @@ Note: Seed script encounters schema mismatches. Recommend using UI workflows to 
 - [x] Build admin user management interface at /admin/users
 - [ ] Test complete workflows (producer registration, project registration, financial onboarding)
 - [ ] Add sample data via UI workflows (3-5 entities per category)
+
+## Session 11 - Strategic Roadmap Implementation
+
+### Immediate Commercial Priorities
+- [ ] Build Demand Signal Registry (RFQ/matching system)
+  - [x] Create demand signals schema and database tables (demandSignals, supplierResponses, platformTransactions)
+  - [x] Add database helper functions for CRUD operations
+  - [ ] Build buyer-side UI for posting requirements (feedstock type, volume, quality, delivery window, price range)
+  - [ ] Create grower-side UI showing aggregated demand signals (no buyer identity)
+  - [ ] Implement matching logic between demand signals and supplier capabilities
+  - [ ] Add transaction fee tracking when agreements signed through platform
+
+- [ ] Implement Certificate Verification API
+  - [ ] Create public API endpoint GET /api/verify/{certificate_hash}
+  - [ ] Return validity status, snapshot date, linked evidence count, issuer details
+  - [ ] Add API key management for paid access
+  - [ ] Implement rate limiting and usage tracking
+  - [ ] Create API documentation page
+
+- [ ] Create Carbon Intensity Reporting Module
+  - [ ] Build CI calculator with Australian emissions factors
+  - [ ] Create paddock-level input forms (fertiliser, tillage, transport distance)
+  - [ ] Generate standardised CI reports
+  - [ ] Add report attachment to feedstock listings
+  - [ ] Implement premium tier for auditor-certified reports
+
+### Phase 6 Stress-Testing (Critical Gap)
+- [ ] Implement Scenario 1: Single Supplier Loss
+  - [ ] Remove top supplier by volume from HHI calculation
+  - [ ] Recalculate coverage ratios
+  - [ ] Flag covenant breaches
+  
+- [ ] Implement Scenario 2: Regional Event
+  - [ ] Select geographic region using climateExposure data
+  - [ ] Apply X% supply reduction to suppliers in region
+  - [ ] Model cascading impact on project bankability
+  
+- [ ] Implement Scenario 3: Price Shock
+  - [ ] Increase feedstock cost by 20/40/60%
+  - [ ] Recalculate project economics
+  - [ ] Identify break-even thresholds
+  
+- [ ] Store stress test results in stressTestResults table
+- [ ] Surface stress test results in lender dashboard
+
+### Phase 8 Legal Defensibility
+- [ ] Add mandatory disclaimers to all certificates and reports
+  - [ ] "ABFI scores represent assessments based on evidence provided as of [snapshot_date]"
+  - [ ] "This certificate does not constitute financial advice or guarantee of supply"
+  - [ ] "Reliance on this certificate is subject to ABFI Platform Terms of Service"
+  
+- [ ] Add evidence provenance statements
+  - [ ] Display issuer name and credentials
+  - [ ] Show issue date and expiry
+  - [ ] Show verification method (self-declared, third-party, audited)
+  - [ ] Display last verification date
+
+### Integration Priorities
+- [ ] ABBA Data Integration
+  - [ ] Build import utility for ABBA geospatial data
+  - [ ] Pull data via National Map API
+  - [ ] Overlay supplier site locations
+  - [ ] Show regional feedstock potential vs current supply registered
+  
+- [ ] GO Scheme Preparation
+  - [ ] Build evidence chain export in GO Scheme-compatible format
+  - [ ] Prepare for CER biofuels module launch
