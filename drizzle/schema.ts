@@ -2353,3 +2353,77 @@ export const dataRetentionPolicies = mysqlTable("dataRetentionPolicies", {
 
 export type DataRetentionPolicy = typeof dataRetentionPolicies.$inferSelect;
 export type InsertDataRetentionPolicy = typeof dataRetentionPolicies.$inferInsert;
+
+// ============================================================================
+// FINANCIAL INSTITUTIONS
+// ============================================================================
+
+export const financialInstitutions = mysqlTable("financialInstitutions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  
+  // Institution Details
+  institutionName: varchar("institutionName", { length: 255 }).notNull(),
+  abn: varchar("abn", { length: 11 }).notNull().unique(),
+  institutionType: mysqlEnum("institutionType", [
+    "commercial_bank",
+    "investment_bank",
+    "private_equity",
+    "venture_capital",
+    "insurance",
+    "superannuation",
+    "government_agency",
+    "development_finance",
+    "other"
+  ]).notNull(),
+  
+  // Regulatory Information
+  regulatoryBody: varchar("regulatoryBody", { length: 255 }),
+  licenseNumber: varchar("licenseNumber", { length: 100 }),
+  
+  // Authorized Representative
+  contactName: varchar("contactName", { length: 255 }).notNull(),
+  contactTitle: varchar("contactTitle", { length: 255 }),
+  contactEmail: varchar("contactEmail", { length: 320 }).notNull(),
+  contactPhone: varchar("contactPhone", { length: 20 }),
+  
+  // Verification
+  verificationMethod: mysqlEnum("verificationMethod", [
+    "mygov_id",
+    "document_upload",
+    "manual_review"
+  ]),
+  verificationStatus: mysqlEnum("verificationStatus", [
+    "pending",
+    "verified",
+    "rejected",
+    "suspended"
+  ]).default("pending").notNull(),
+  verifiedAt: timestamp("verifiedAt"),
+  verifiedBy: int("verifiedBy").references(() => users.id),
+  
+  // Access Tier
+  accessTier: mysqlEnum("accessTier", [
+    "basic",
+    "professional",
+    "enterprise"
+  ]).default("basic").notNull(),
+  
+  // Data Categories Access
+  dataCategories: json("dataCategories").$type<string[]>(),
+  
+  // Compliance Declarations
+  authorizedRepresentative: boolean("authorizedRepresentative").default(false).notNull(),
+  dataProtection: boolean("dataProtection").default(false).notNull(),
+  regulatoryCompliance: boolean("regulatoryCompliance").default(false).notNull(),
+  termsAccepted: boolean("termsAccepted").default(false).notNull(),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("financialInstitutions_userId_idx").on(table.userId),
+  verificationStatusIdx: index("financialInstitutions_verificationStatus_idx").on(table.verificationStatus),
+}));
+
+export type FinancialInstitution = typeof financialInstitutions.$inferSelect;
+export type InsertFinancialInstitution = typeof financialInstitutions.$inferInsert;

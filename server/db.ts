@@ -24,7 +24,8 @@ import {
   productionHistory, InsertProductionHistory,
   carbonPractices, InsertCarbonPractice,
   existingContracts, InsertExistingContract,
-  marketplaceListings, InsertMarketplaceListing
+  marketplaceListings, InsertMarketplaceListing,
+  financialInstitutions, InsertFinancialInstitution
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -1239,4 +1240,52 @@ export async function getCertificateSnapshotByCertificateId(certificateId: numbe
     .limit(1);
   
   return results[0] || null;
+}
+
+// ============================================================================
+// FINANCIAL INSTITUTIONS
+// ============================================================================
+
+export async function createFinancialInstitution(data: InsertFinancialInstitution): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(financialInstitutions).values(data);
+  return Number((result as any).insertId);
+}
+
+export async function getFinancialInstitutionByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const results = await db
+    .select()
+    .from(financialInstitutions)
+    .where(eq(financialInstitutions.userId, userId))
+    .limit(1);
+  
+  return results[0] || null;
+}
+
+export async function getFinancialInstitutionByABN(abn: string) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const results = await db
+    .select()
+    .from(financialInstitutions)
+    .where(eq(financialInstitutions.abn, abn))
+    .limit(1);
+  
+  return results[0] || null;
+}
+
+export async function updateFinancialInstitution(id: number, data: Partial<InsertFinancialInstitution>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db
+    .update(financialInstitutions)
+    .set(data)
+    .where(eq(financialInstitutions.id, id));
 }

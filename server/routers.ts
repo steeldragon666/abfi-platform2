@@ -206,6 +206,100 @@ export const appRouter = router({
     getStats: supplierProcedure.query(async ({ ctx }) => {
       return await db.getSupplierStats(ctx.supplier.id);
     }),
+    
+    // Comprehensive producer registration (7-step flow)
+    registerProducer: protectedProcedure
+      .input(z.object({
+        // Account Setup
+        abn: z.string().length(11),
+        companyName: z.string().min(1),
+        tradingName: z.string().optional(),
+        contactEmail: z.string().email(),
+        contactPhone: z.string().optional(),
+        website: z.string().optional(),
+        
+        // Property Details
+        properties: z.array(z.object({
+          propertyName: z.string(),
+          primaryAddress: z.string().optional(),
+          latitude: z.string().optional(),
+          longitude: z.string().optional(),
+          state: z.enum(["NSW", "VIC", "QLD", "SA", "WA", "TAS", "NT", "ACT"]).optional(),
+          postcode: z.string().optional(),
+          region: z.string().optional(),
+          totalLandArea: z.number().optional(),
+          cultivatedArea: z.number().optional(),
+        })).optional(),
+        
+        // Production Profile
+        feedstockTypes: z.array(z.string()).optional(),
+        annualProduction: z.number().optional(),
+        
+        // Visibility preferences
+        profilePublic: z.boolean().default(true),
+        showContactDetails: z.boolean().default(false),
+        showExactLocation: z.boolean().default(false),
+        allowDirectInquiries: z.boolean().default(true),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Validate ABN
+        if (!validateABN(input.abn)) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Invalid ABN',
+          });
+        }
+        
+        // Check if ABN already exists
+        const existing = await db.getSupplierByABN(input.abn);
+        if (existing) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'ABN already registered',
+          });
+        }
+        
+        // Check if user already has a supplier profile
+        const existingSupplier = await db.getSupplierByUserId(ctx.user.id);
+        if (existingSupplier) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Supplier profile already exists',
+          });
+        }
+        
+        // Create supplier profile
+        const supplierId = await db.createSupplier({
+          userId: ctx.user.id,
+          abn: input.abn,
+          companyName: input.companyName,
+          contactEmail: input.contactEmail,
+          contactPhone: input.contactPhone,
+          website: input.website,
+        });
+        
+        // Create properties if provided
+        if (input.properties && input.properties.length > 0) {
+          for (const property of input.properties) {
+            await db.createProperty({
+              supplierId,
+              ...property,
+            });
+          }
+        }
+        
+        // Update user role
+        await db.updateUserRole(ctx.user.id, 'supplier');
+        
+        await createAuditLog({
+          userId: ctx.user.id,
+          action: 'register_producer',
+          entityType: 'supplier',
+          entityId: supplierId,
+        });
+        
+        return { supplierId, success: true };
+      }),
   }),
   
   // ============================================================================
@@ -291,6 +385,102 @@ export const appRouter = router({
         });
         
         return { success: true };
+      }),
+  }),
+  
+  // ============================================================================
+  // FINANCIAL INSTITUTIONS
+  // ============================================================================
+  
+  financialInstitutions: router({
+    register: protectedProcedure
+      .input(z.object({
+        // Institution Details
+        institutionName: z.string().min(1),
+        abn: z.string().length(11),
+        institutionType: z.enum([
+          "commercial_bank",
+          "investment_bank",
+          "private_equity",
+          "venture_capital",
+          "insurance",
+          "superannuation",
+          "government_agency",
+          "development_finance",
+          "other"
+        ]),
+        regulatoryBody: z.string().optional(),
+        licenseNumber: z.string().optional(),
+        
+        // Authorized Representative
+        contactName: z.string().min(1),
+        contactTitle: z.string().optional(),
+        contactEmail: z.string().email(),
+        contactPhone: z.string().optional(),
+        
+        // Verification
+        verificationMethod: z.enum(["mygov_id", "document_upload", "manual_review"]).optional(),
+        
+        // Access Tier
+        accessTier: z.enum(["basic", "professional", "enterprise"]).default("basic"),
+        dataCategories: z.array(z.string()).optional(),
+        
+        // Compliance Declarations
+        authorizedRepresentative: z.boolean(),
+        dataProtection: z.boolean(),
+        regulatoryCompliance: z.boolean(),
+        termsAccepted: z.boolean(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Validate ABN
+        if (!validateABN(input.abn)) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Invalid ABN',
+          });
+        }
+        
+        // Validate all declarations are accepted
+        if (!input.authorizedRepresentative || !input.dataProtection || 
+            !input.regulatoryCompliance || !input.termsAccepted) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'All compliance declarations must be accepted',
+          });
+        }
+        
+        // Check if ABN already exists
+        const existing = await db.getFinancialInstitutionByABN(input.abn);
+        if (existing) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'ABN already registered',
+          });
+        }
+        
+        // Check if user already has a financial institution profile
+        const existingInstitution = await db.getFinancialInstitutionByUserId(ctx.user.id);
+        if (existingInstitution) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Financial institution profile already exists',
+          });
+        }
+        
+        // Create financial institution profile
+        const institutionId = await db.createFinancialInstitution({
+          userId: ctx.user.id,
+          ...input,
+        });
+        
+        await createAuditLog({
+          userId: ctx.user.id,
+          action: 'register_financial_institution',
+          entityType: 'financial_institution',
+          entityId: institutionId,
+        });
+        
+        return { institutionId, success: true };
       }),
   }),
   

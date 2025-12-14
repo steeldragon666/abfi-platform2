@@ -8,6 +8,7 @@ import { Link } from "wouter";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { trpc } from "@/lib/trpc";
 
 export default function ProducerReview() {
   const [, setLocation] = useLocation();
@@ -28,17 +29,43 @@ export default function ProducerReview() {
     }
   }, []);
 
+  const registerMutation = trpc.suppliers.registerProducer.useMutation({
+    onSuccess: () => {
+      // Clear registration data
+      localStorage.removeItem("producerRegistration");
+      // Redirect to success page
+      setLocation("/producer-registration/success");
+    },
+    onError: (error) => {
+      alert(`Registration failed: ${error.message}`);
+      setIsSubmitting(false);
+    },
+  });
+  
   const handlePublish = async () => {
+    if (!termsAccepted) {
+      alert("Please accept the terms and conditions");
+      return;
+    }
+    
     setIsSubmitting(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Clear registration data
-    localStorage.removeItem("producerRegistration");
-    
-    // Redirect to success page
-    setLocation("/producer-registration/success");
+    // Transform registration data to match API schema
+    registerMutation.mutate({
+      abn: registrationData.accountSetup?.abn || "",
+      companyName: registrationData.accountSetup?.companyName || "",
+      tradingName: registrationData.accountSetup?.tradingName,
+      contactEmail: registrationData.accountSetup?.contactEmail || "",
+      contactPhone: registrationData.accountSetup?.contactPhone,
+      website: registrationData.accountSetup?.website,
+      properties: registrationData.properties ? [registrationData.properties] : [],
+      feedstockTypes: registrationData.productionProfile?.feedstockTypes,
+      annualProduction: registrationData.productionProfile?.annualProduction,
+      profilePublic: visibility.profilePublic,
+      showContactDetails: visibility.showContactDetails,
+      showExactLocation: visibility.showExactLocation,
+      allowDirectInquiries: visibility.allowDirectInquiries,
+    });
   };
 
   if (!registrationData) {

@@ -458,9 +458,9 @@ Note: Seed script encounters schema mismatches. Recommend using UI workflows to 
 - [x] Test certificate verification flow
 
 ## Form Submission Integration (Session 20)
-- [ ] Wire producer registration form to trpc.producer.register mutation
+- [x] Wire producer registration form to trpc.suppliers.registerProducer mutation
 - [x] Wire project registration form to trpc.bankability.registerProject mutation
-- [ ] Wire financial onboarding form to database
+- [x] Wire financial onboarding form to database
 - [ ] Create ProducerRegistrationSuccess page with application tracking
 - [x] Create ProjectRegistrationSuccess page with application tracking
 - [ ] Create FinancialOnboardingSuccess page with application tracking

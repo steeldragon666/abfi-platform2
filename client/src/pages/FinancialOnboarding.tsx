@@ -46,13 +46,38 @@ export default function FinancialOnboarding() {
     },
   });
 
+  const registerMutation = trpc.financialInstitutions.register.useMutation({
+    onSuccess: () => {
+      setLocation("/financial-onboarding/success");
+    },
+    onError: (error) => {
+      alert(`Registration failed: ${error.message}`);
+    },
+  });
+  
   const handleNext = () => {
     if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
     } else {
       // Submit form
-      console.log("Form submitted:", formData);
-      setLocation("/dashboard");
+      registerMutation.mutate({
+        institutionName: formData.institutionName,
+        abn: formData.abn,
+        institutionType: formData.institutionType as any,
+        regulatoryBody: formData.regulatoryBody,
+        licenseNumber: formData.licenseNumber,
+        contactName: formData.contactName,
+        contactTitle: formData.contactTitle,
+        contactEmail: formData.contactEmail,
+        contactPhone: formData.contactPhone,
+        verificationMethod: formData.verificationMethod as any,
+        accessTier: formData.accessTier as any || "basic",
+        dataCategories: formData.dataCategories,
+        authorizedRepresentative: formData.declarations.authorizedRepresentative,
+        dataProtection: formData.declarations.dataProtection,
+        regulatoryCompliance: formData.declarations.regulatoryCompliance,
+        termsAccepted: formData.declarations.termsAccepted,
+      });
     }
   };
 
