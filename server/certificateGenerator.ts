@@ -5,6 +5,8 @@
  */
 
 import { jsPDF } from "jspdf";
+import QRCode from 'qrcode';
+import { createHash } from 'crypto';
 
 export interface CertificateData {
   // Feedstock details
@@ -28,14 +30,15 @@ export interface CertificateData {
 
   // Certificate metadata
   certificateNumber: string;
+  certificateHash?: string; // Optional, added after initial generation
   issueDate: string;
   validUntil: string;
   assessmentDate: string;
 
   // Additional metrics
-  carbonIntensity?: number; // gCO2e/MJ
-  annualVolume?: number; // tonnes
-  certifications?: string[]; // ISCC, RSB, etc.
+  carbonIntensity: number; // gCO2e/MJ
+  annualVolume: number; // tonnes
+  certifications: string[]; // ISCC, RSB, etc.
 }
 
 /**
@@ -248,6 +251,30 @@ export async function generateABFICertificate(data: CertificateData): Promise<Bu
   doc.setFont("helvetica", "bold");
   doc.text(data.validUntil, 60, yPos + 20);
 
+  // === QR CODE AND HASH SECTION ===
+  const qrX = pageWidth - 45;
+  const qrY = yPos + 3;
+
+  // Generate certificate hash if not provided
+  const certHash = data.certificateHash || generateCertificateHash(data);
+  
+  // Generate QR code
+  const verificationUrl = `${process.env.VITE_FRONTEND_FORGE_API_URL || 'https://app.biofeedau.com.au'}/certificate-verification?hash=${certHash}`;
+  const qrCodeDataUrl = await QRCode.toDataURL(verificationUrl, {
+    width: 80,
+    margin: 0,
+    color: { dark: '#0a0f14', light: '#ffffff' },
+  });
+
+  // Add QR code to PDF
+  doc.addImage(qrCodeDataUrl, 'PNG', qrX, qrY, 20, 20);
+
+  // Add hash text (small)
+  doc.setFontSize(6);
+  doc.setFont("courier", "normal");
+  doc.setTextColor(107, 114, 128);
+  doc.text(`Hash: ${certHash.substring(0, 16)}...`, pageWidth - 45, yPos + 24, { maxWidth: 25 });
+
   // === FOOTER ===
   doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
@@ -268,6 +295,27 @@ export async function generateABFICertificate(data: CertificateData): Promise<Bu
   // Generate PDF buffer
   const pdfBuffer = Buffer.from(doc.output("arraybuffer"));
   return pdfBuffer;
+}
+
+/**
+ * Generate blockchain-style hash for certificate
+ */
+export function generateCertificateHash(data: CertificateData): string {
+  const hashInput = JSON.stringify({
+    id: data.certificateNumber,
+    feedstock: data.feedstockName,
+    supplier: data.supplierABN,
+    scores: {
+      abfi: data.abfiScore,
+      sustainability: data.sustainabilityScore,
+      carbon: data.carbonIntensityScore,
+      quality: data.qualityScore,
+      reliability: data.reliabilityScore,
+    },
+    date: data.assessmentDate,
+  });
+  
+  return createHash('sha256').update(hashInput).digest('hex');
 }
 
 /**

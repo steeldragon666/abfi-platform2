@@ -782,6 +782,14 @@ export async function updateBankabilityAssessment(id: number, updates: Partial<I
   await db.update(bankabilityAssessments).set(updates).where(eq(bankabilityAssessments.id, id));
 }
 
+export async function getAllBankabilityAssessments() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(bankabilityAssessments)
+    .orderBy(desc(bankabilityAssessments.createdAt));
+}
+
 // Lender Access
 export async function createLenderAccess(access: InsertLenderAccess): Promise<number> {
   const db = await getDb();

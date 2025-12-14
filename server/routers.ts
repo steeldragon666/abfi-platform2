@@ -1,7 +1,8 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
+import { router, publicProcedure, protectedProcedure } from './_core/trpc.js';
+import { monitoringJobsRouter } from './monitoringJobsRouter.js';
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
@@ -52,6 +53,7 @@ const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 
 export const appRouter = router({
   system: systemRouter,
+  monitoringJobs: monitoringJobsRouter,
   
   // ============================================================================
   // AUTH
@@ -1665,6 +1667,149 @@ export const appRouter = router({
         return await db.getLatestBankabilityAssessment(input.projectId);
       }),
     
+    // Admin Assessor Workflow
+    listAssessments: protectedProcedure
+      .query(async ({ ctx }) => {
+        // Only admins can list all assessments
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN' });
+        }
+        return await db.getAllBankabilityAssessments();
+      }),
+    
+    approveAssessment: protectedProcedure
+      .input(z.object({
+        assessmentId: z.number(),
+        approverNotes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Only admins can approve assessments
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN' });
+        }
+        
+        await db.updateBankabilityAssessment(input.assessmentId, {
+          status: 'approved',
+          // Note: approvalDate, approvedBy, approverNotes fields don't exist in schema
+          // Using assessmentNotes for approval notes
+        });
+        
+        await createAuditLog({
+          userId: ctx.user.id,
+          action: 'approve_assessment',
+          entityType: 'bankability_assessment',
+          entityId: input.assessmentId,
+          changes: { after: { status: 'approved', approvedBy: ctx.user.id } },
+        });
+        
+        return { success: true };
+      }),
+    
+    rejectAssessment: protectedProcedure
+      .input(z.object({
+        assessmentId: z.number(),
+        rejectionReason: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Only admins can reject assessments
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN' });
+        }
+        
+        await db.updateBankabilityAssessment(input.assessmentId, {
+          status: 'rejected',
+          reassessmentReason: input.rejectionReason,
+        });
+        
+        await createAuditLog({
+          userId: ctx.user.id,
+          action: 'reject_assessment',
+          entityType: 'bankability_assessment',
+          entityId: input.assessmentId,
+          changes: { after: { status: 'rejected', rejectedBy: ctx.user.id } },
+        });
+        
+        return { success: true };
+      }),
+    
+    adjustAssessmentScore: protectedProcedure
+      .input(z.object({
+        assessmentId: z.number(),
+        adjustedScores: z.record(z.string(), z.number()),
+        reason: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Only admins can adjust scores
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN' });
+        }
+        
+        const assessment = await db.getBankabilityAssessmentById(input.assessmentId);
+        if (!assessment) {
+          throw new TRPCError({ code: 'NOT_FOUND' });
+        }
+        
+        // Apply score adjustments
+        const updates: any = {};
+        if (input.adjustedScores.volumeSecurity !== undefined) {
+          updates.volumeSecurityScore = input.adjustedScores.volumeSecurity;
+        }
+        if (input.adjustedScores.counterpartyQuality !== undefined) {
+          updates.counterpartyQualityScore = input.adjustedScores.counterpartyQuality;
+        }
+        if (input.adjustedScores.contractStructure !== undefined) {
+          updates.contractStructureScore = input.adjustedScores.contractStructure;
+        }
+        if (input.adjustedScores.concentrationRisk !== undefined) {
+          updates.concentrationRiskScore = input.adjustedScores.concentrationRisk;
+        }
+        if (input.adjustedScores.operationalReadiness !== undefined) {
+          updates.operationalReadinessScore = input.adjustedScores.operationalReadiness;
+        }
+        
+        // Recalculate composite score with adjusted values
+        const scores = {
+          volumeSecurity: updates.volumeSecurityScore || assessment.volumeSecurityScore,
+          counterpartyQuality: updates.counterpartyQualityScore || assessment.counterpartyQualityScore,
+          contractStructure: updates.contractStructureScore || assessment.contractStructureScore,
+          concentrationRisk: updates.concentrationRiskScore || assessment.concentrationRiskScore,
+          operationalReadiness: updates.operationalReadinessScore || assessment.operationalReadinessScore,
+        };
+        
+        const compositeScore = Math.round(
+          scores.volumeSecurity * 0.30 +
+          scores.counterpartyQuality * 0.25 +
+          scores.contractStructure * 0.20 +
+          scores.concentrationRisk * 0.15 +
+          scores.operationalReadiness * 0.10
+        );
+        
+        updates.compositeScore = compositeScore;
+        updates.reassessmentReason = input.reason;
+        
+        await db.updateBankabilityAssessment(input.assessmentId, updates);
+        
+        await createAuditLog({
+          userId: ctx.user.id,
+          action: 'adjust_assessment_scores',
+          entityType: 'bankability_assessment',
+          entityId: input.assessmentId,
+          changes: {
+            before: {
+              volumeSecurityScore: assessment.volumeSecurityScore,
+              counterpartyQualityScore: assessment.counterpartyQualityScore,
+              contractStructureScore: assessment.contractStructureScore,
+              concentrationRiskScore: assessment.concentrationRiskScore,
+              operationalReadinessScore: assessment.operationalReadinessScore,
+              compositeScore: assessment.compositeScore,
+            },
+            after: updates,
+          },
+        });
+        
+        return { success: true, newCompositeScore: compositeScore };
+      }),
+    
     // Lender Access
     grantLenderAccess: protectedProcedure
       .input(z.object({
@@ -2886,6 +3031,86 @@ export const appRouter = router({
   // CERTIFICATE VERIFICATION
   // ============================================================================
   certificateVerification: router({
+    generateCertificate: protectedProcedure
+      .input(z.object({
+        feedstockId: z.number(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        // Get feedstock details
+        const feedstock = await db.getFeedstockById(input.feedstockId);
+        if (!feedstock) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Feedstock not found' });
+        }
+
+        // Get supplier details
+        const supplier = await db.getSupplierById(feedstock.supplierId);
+        if (!supplier) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Supplier not found' });
+        }
+
+        // Generate certificate data
+        const certificateNumber = `ABFI-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+        const issueDate = new Date();
+        const validUntil = new Date();
+        validUntil.setFullYear(validUntil.getFullYear() + 1); // Valid for 1 year
+
+        const certificateData = {
+          feedstockId: feedstock.id,
+          feedstockName: feedstock.sourceName || feedstock.type,
+          feedstockCategory: feedstock.category || feedstock.type || 'Unknown',
+          supplierName: supplier.companyName,
+          supplierABN: supplier.abn || 'N/A',
+          location: supplier.city || 'Unknown',
+          state: supplier.state || 'Unknown',
+          abfiScore: feedstock.abfiScore || 0,
+          sustainabilityScore: feedstock.sustainabilityScore || 0,
+          carbonIntensityScore: feedstock.carbonIntensityScore || 0,
+          qualityScore: feedstock.qualityScore || 0,
+          reliabilityScore: feedstock.reliabilityScore || 0,
+          ratingGrade: 'N/A', // Rating grade not in feedstocks table
+          certificateNumber,
+          issueDate: issueDate.toLocaleDateString('en-AU'),
+          validUntil: validUntil.toLocaleDateString('en-AU'),
+          assessmentDate: feedstock.createdAt ? new Date(feedstock.createdAt).toLocaleDateString('en-AU') : issueDate.toLocaleDateString('en-AU'),
+          carbonIntensity: feedstock.carbonIntensityScore || 0,
+          annualVolume: feedstock.annualCapacityTonnes || 0,
+          certifications: [],
+        };
+
+        // Generate certificate hash
+        const { generateCertificateHash, generateABFICertificate } = await import('./certificateGenerator');
+        const certificateHash = generateCertificateHash(certificateData);
+
+        // Generate PDF
+        const pdfBuffer = await generateABFICertificate({ ...certificateData, certificateHash });
+
+        // Save certificate snapshot to database
+        await db.createCertificateSnapshot({
+          certificateId: feedstock.id,
+          snapshotHash: certificateHash,
+          frozenScoreData: {
+            abfiScore: feedstock.abfiScore || 0,
+            pillarScores: {
+              sustainability: feedstock.sustainabilityScore || 0,
+              carbon: feedstock.carbonIntensityScore || 0,
+              quality: feedstock.qualityScore || 0,
+              reliability: feedstock.reliabilityScore || 0,
+            },
+            rating: 'N/A', // Rating grade not in feedstocks table
+            calculationDate: new Date().toISOString(),
+          },
+          frozenEvidenceSet: [],
+          createdBy: ctx.user.id,
+        });
+
+        // Return PDF as base64
+        return {
+          certificateNumber,
+          certificateHash,
+          pdfBase64: pdfBuffer.toString('base64'),
+        };
+      }),
+
     verifyHash: publicProcedure
       .input(z.object({
         hash: z.string().length(64), // SHA-256 hash is 64 hex characters
