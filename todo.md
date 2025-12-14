@@ -616,3 +616,11 @@ Note: Seed script encounters schema mismatches. Recommend using UI workflows to 
 - [ ] GO Scheme Preparation
   - [ ] Build evidence chain export in GO Scheme-compatible format
   - [ ] Prepare for CER biofuels module launch
+
+## Session 12 - GitHub Integration
+- [ ] Check existing git status and verify .gitignore
+- [ ] Initialize git repository if needed
+- [ ] Make initial commit with all current code
+- [ ] Connect to GitHub remote (powerplantnrg/abfi-platform)
+- [ ] Push code to GitHub
+- [ ] Document collaboration workflow for team
