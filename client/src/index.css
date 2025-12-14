@@ -336,31 +336,13 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'IBM Plex Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: var(--bg-primary);
-    color: var(--text-primary);
+    font-family: 'Inter', 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
-  
-  /* Subtle background texture for financial theme */
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: 
-      radial-gradient(ellipse at 20% 20%, rgba(201, 169, 98, 0.03) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 80%, rgba(61, 139, 95, 0.02) 0%, transparent 50%);
-    pointer-events: none;
-    z-index: 0;
-  }
-  
+
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'DM Serif Display', 'Montserrat', serif;
-    font-weight: 400;
-    letter-spacing: -0.5px;
-    color: var(--text-primary);
+    font-family: 'Inter', 'DM Serif Display', sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.025em;
   }
   
   code, pre, .font-mono {
