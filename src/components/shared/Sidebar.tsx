@@ -16,6 +16,8 @@ import {
   CheckCircle,
   BarChart3,
   LogOut,
+  TrendingUp,
+  Database,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -42,6 +44,7 @@ const buyerNavItems: NavItem[] = [
   { title: "Dashboard", href: "/buyer", icon: LayoutDashboard },
   { title: "Search Feedstocks", href: "/buyer/search", icon: Search },
   { title: "Shortlist", href: "/buyer/shortlist", icon: Star },
+  { title: "Bankability", href: "/buyer/bankability", icon: TrendingUp },
   { title: "My Inquiries", href: "/buyer/inquiries", icon: MessageSquare },
   { title: "Settings", href: "/buyer/settings", icon: Settings },
 ];
@@ -50,6 +53,7 @@ const adminNavItems: NavItem[] = [
   { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { title: "Verification Queue", href: "/admin/verification", icon: CheckCircle },
   { title: "Users", href: "/admin/users", icon: Users },
+  { title: "ABBA Import", href: "/admin/abba-import", icon: Database },
   { title: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { title: "Settings", href: "/admin/settings", icon: Settings },
 ];

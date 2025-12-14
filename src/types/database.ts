@@ -577,3 +577,264 @@ export interface CIEmissionInput {
   scope3_distribution: number;
   scope3_end_of_life: number;
 }
+
+// ============================================
+// BANKABILITY MODULE TYPES
+// ============================================
+
+export type ContractType = 'spot' | 'forward' | 'offtake' | 'framework';
+export type ContractStatus = 'draft' | 'pending' | 'active' | 'expired' | 'terminated';
+export type PriceType = 'fixed' | 'indexed' | 'floating';
+export type ScenarioType = 'price_shock' | 'supply_disruption' | 'covenant_breach' | 'regulatory' | 'custom';
+export type ScenarioStatus = 'draft' | 'running' | 'completed' | 'failed';
+export type RiskRating = 'low' | 'moderate' | 'elevated' | 'high';
+
+export interface SupplyContract {
+  id: string;
+  contract_id: string;
+  buyer_id: string;
+  supplier_id: string;
+  feedstock_id: string | null;
+
+  contract_type: ContractType;
+  volume_committed_tonnes: number;
+  volume_minimum_tonnes: number | null;
+  duration_months: number | null;
+
+  price_per_tonne: number;
+  price_type: PriceType;
+  price_index_reference: string | null;
+  escalation_percentage: number | null;
+
+  start_date: string;
+  end_date: string | null;
+
+  status: ContractStatus;
+  notes: string | null;
+  documents: { name: string; url: string; type: string }[];
+
+  created_at: string;
+  updated_at: string;
+
+  // Relations
+  buyer?: Buyer;
+  supplier?: Supplier;
+  feedstock?: Feedstock;
+}
+
+export interface StressTestParameters {
+  price_shock_percentage?: number;
+  supply_reduction_percentage?: number;
+  affected_suppliers?: string[];
+  affected_categories?: FeedstockCategory[];
+  duration_months?: number;
+  carbon_price_increase?: number;
+  regulatory_threshold_change?: number;
+}
+
+export interface StressTestBaseline {
+  annual_volume_required: number;
+  current_average_price: number;
+  carbon_credit_price: number;
+  fuel_blend_mandate: number;
+  current_supplier_count: number;
+  concentration_top_supplier_percentage: number;
+}
+
+export interface StressTestResults {
+  financial_impact: number;
+  supply_gap_tonnes: number;
+  alternative_cost_per_tonne: number;
+  risk_score: number;
+  covenant_status: 'compliant' | 'warning' | 'breach';
+  mitigation_options: {
+    option: string;
+    cost_impact: number;
+    implementation_time_days: number;
+    effectiveness_score: number;
+  }[];
+  sensitivity_analysis: {
+    variable: string;
+    base_value: number;
+    impact_per_unit: number;
+  }[];
+}
+
+export interface StressTestScenario {
+  id: string;
+  scenario_id: string;
+  buyer_id: string | null;
+  created_by: string;
+
+  name: string;
+  description: string | null;
+  scenario_type: ScenarioType;
+
+  parameters: StressTestParameters;
+  baseline_assumptions: StressTestBaseline;
+  results: StressTestResults | null;
+
+  status: ScenarioStatus;
+  run_at: string | null;
+  completed_at: string | null;
+
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FinancialProjection {
+  id: string;
+  projection_id: string;
+  buyer_id: string;
+  created_by: string;
+
+  name: string;
+  base_date: string;
+  horizon_months: number;
+
+  annual_volume_tonnes: number;
+  volume_growth_rate: number;
+
+  average_price_per_tonne: number;
+  price_escalation_rate: number;
+
+  carbon_intensity_target: number | null;
+  carbon_credit_price: number | null;
+
+  total_projected_value: number | null;
+  projected_carbon_savings: number | null;
+  projected_carbon_credits: number | null;
+
+  period_projections: {
+    period: number;
+    volume: number;
+    price: number;
+    value: number;
+    carbon_savings: number;
+  }[];
+
+  methodology_notes: string | null;
+  data_sources: { source: string; date: string; description: string }[];
+  disclaimers: string[];
+
+  status: string;
+  approved_by: string | null;
+  approved_at: string | null;
+
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SupplierRiskAssessment {
+  id: string;
+  supplier_id: string;
+  assessed_by: string | null;
+
+  delivery_risk_score: number;
+  price_volatility_score: number;
+  concentration_risk_score: number;
+  financial_stability_score: number;
+  regulatory_risk_score: number;
+
+  overall_risk_score: number;
+  risk_rating: RiskRating;
+
+  assessment_data: Record<string, unknown>;
+  notes: string | null;
+
+  assessment_date: string;
+  valid_until: string | null;
+
+  created_at: string;
+  updated_at: string;
+
+  // Relations
+  supplier?: Supplier;
+}
+
+export interface MethodologyProvenance {
+  id: string;
+  entity_type: 'abfi_score' | 'ci_report' | 'stress_test' | 'projection' | 'risk_assessment';
+  entity_id: string;
+
+  methodology_name: string;
+  methodology_version: string;
+  calculation_date: string;
+
+  input_data: Record<string, unknown>;
+  input_sources: { source: string; date: string; verified: boolean }[];
+  calculation_steps: { step: number; operation: string; result: number; formula?: string }[];
+  output_data: Record<string, unknown>;
+
+  confidence_level: 'high' | 'medium' | 'low' | null;
+  uncertainty_notes: string | null;
+
+  verified_by: string | null;
+  verified_at: string | null;
+
+  created_at: string;
+}
+
+export interface DisclaimerTemplate {
+  id: string;
+  code: string;
+  title: string;
+  content: string;
+  applies_to: string[];
+  is_required: boolean;
+  version: number;
+  effective_date: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ABBAMarketPrice {
+  id: string;
+  feedstock_category: FeedstockCategory;
+  region: 'AU' | 'EU' | 'US' | 'APAC';
+  price_date: string;
+  price_aud_per_tonne: number;
+  price_usd_per_tonne: number | null;
+  price_low: number | null;
+  price_high: number | null;
+  volume_available_tonnes: number | null;
+  source: 'ABBA' | 'Platts' | 'Argus' | 'manual';
+  created_at: string;
+}
+
+export interface SystemMetrics {
+  id: string;
+  metric_date: string;
+  metric_type: 'daily' | 'weekly' | 'monthly';
+
+  total_users: number;
+  active_users: number;
+  new_users: number;
+
+  total_suppliers: number;
+  verified_suppliers: number;
+  new_suppliers: number;
+
+  total_buyers: number;
+  active_buyers: number;
+  new_buyers: number;
+
+  total_feedstocks: number;
+  active_feedstocks: number;
+  new_feedstocks: number;
+
+  total_inquiries: number;
+  new_inquiries: number;
+  converted_inquiries: number;
+  total_transaction_value: number;
+
+  ci_reports_submitted: number;
+  ci_reports_verified: number;
+  average_ci_value: number | null;
+
+  api_requests: number;
+  avg_response_time_ms: number | null;
+  error_count: number;
+
+  created_at: string;
+}

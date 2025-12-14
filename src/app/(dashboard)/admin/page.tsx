@@ -18,6 +18,9 @@ import {
   Clock,
   AlertTriangle,
   TrendingUp,
+  Leaf,
+  Database,
+  FileText,
 } from "lucide-react";
 
 export const metadata = {
@@ -61,6 +64,28 @@ export default async function AdminDashboardPage() {
   const { count: totalUsers } = await supabase
     .from("profiles")
     .select("*", { count: "exact", head: true });
+
+  // CI Reports metrics
+  const { count: totalCIReports } = await supabase
+    .from("carbon_intensity_reports")
+    .select("*", { count: "exact", head: true });
+
+  const { count: pendingCIReports } = await supabase
+    .from("carbon_intensity_reports")
+    .select("*", { count: "exact", head: true })
+    .in("status", ["submitted", "under_review"]);
+
+  // Stress test metrics
+  const { count: totalStressTests } = await supabase
+    .from("stress_test_scenarios")
+    .select("*", { count: "exact", head: true });
+
+  // Recent ABBA imports
+  const { data: recentImports } = await supabase
+    .from("abba_import_logs")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(3);
 
   return (
     <div className="space-y-6">
@@ -157,6 +182,48 @@ export default async function AdminDashboardPage() {
         </Card>
       </div>
 
+      {/* Secondary metrics */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">CI Reports</CardTitle>
+            <Leaf className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalCIReports || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              {pendingCIReports || 0} awaiting verification
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Stress Tests</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalStressTests || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Scenarios created
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">ABBA Imports</CardTitle>
+            <Database className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{recentImports?.length || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              Recent imports
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Quick actions */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -226,6 +293,73 @@ export default async function AdminDashboardPage() {
             <Button asChild className="w-full mt-4" variant="outline">
               <Link href="/admin/analytics">View Full Analytics</Link>
             </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Data Management */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>CI Report Management</CardTitle>
+            <CardDescription>
+              Review and verify carbon intensity reports
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button asChild className="w-full justify-start" variant="outline">
+              <Link href="/auditor/ci-verification">
+                <Leaf className="mr-2 h-4 w-4" />
+                CI Verification Queue
+                {(pendingCIReports || 0) > 0 && (
+                  <span className="ml-auto bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-xs">
+                    {pendingCIReports}
+                  </span>
+                )}
+              </Link>
+            </Button>
+            <Button asChild className="w-full justify-start" variant="outline">
+              <Link href="/admin/ci-reports">
+                <FileText className="mr-2 h-4 w-4" />
+                All CI Reports
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Data Integration</CardTitle>
+            <CardDescription>
+              Manage ABBA market data and external integrations
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button asChild className="w-full justify-start" variant="outline">
+              <Link href="/admin/abba-import">
+                <Database className="mr-2 h-4 w-4" />
+                ABBA Data Import
+              </Link>
+            </Button>
+            <Button asChild className="w-full justify-start" variant="outline">
+              <Link href="/admin/market-prices">
+                <TrendingUp className="mr-2 h-4 w-4" />
+                Market Prices
+              </Link>
+            </Button>
+            {recentImports && recentImports.length > 0 && (
+              <div className="pt-2 border-t">
+                <p className="text-sm text-muted-foreground mb-2">Recent imports:</p>
+                {recentImports.map((imp) => (
+                  <div key={imp.id} className="flex items-center justify-between text-sm py-1">
+                    <span>{imp.import_type} import</span>
+                    <span className={imp.status === 'completed' ? 'text-green-600' : 'text-amber-600'}>
+                      {imp.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
