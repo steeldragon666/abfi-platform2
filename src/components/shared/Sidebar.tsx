@@ -63,6 +63,7 @@ const adminNavItems: NavItem[] = [
   { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { title: "Verification Queue", href: "/admin/verification", icon: CheckCircle },
   { title: "Users", href: "/admin/users", icon: Users },
+  { title: "Markets", href: "/admin/markets", icon: LineChart },
   { title: "ABBA Import", href: "/admin/abba-import", icon: Database },
   { title: "Announcements", href: "/admin/announcements", icon: Megaphone },
   { title: "Audit Logs", href: "/admin/audit-logs", icon: ClipboardList },
