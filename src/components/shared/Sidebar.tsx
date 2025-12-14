@@ -21,6 +21,7 @@ import {
   Bell,
   ClipboardList,
   Megaphone,
+  Factory,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -50,6 +51,7 @@ const buyerNavItems: NavItem[] = [
   { title: "Shortlist", href: "/buyer/shortlist", icon: Star },
   { title: "Bankability", href: "/buyer/bankability", icon: TrendingUp },
   { title: "My Inquiries", href: "/buyer/inquiries", icon: MessageSquare },
+  { title: "Facilities", href: "/buyer/facilities", icon: Factory },
   { title: "Notifications", href: "/buyer/notifications", icon: Bell },
   { title: "Settings", href: "/buyer/settings", icon: Settings },
 ];
