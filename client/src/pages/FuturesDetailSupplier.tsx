@@ -25,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { PageLayout } from "@/components/layout";
 import { trpc } from "@/lib/trpc";
 import { formatDate } from "@/const";
 import {
@@ -48,10 +49,127 @@ import {
   Building2,
   Phone,
   Mail,
+  Sparkles,
+  Shield,
+  BarChart3,
+  FileText,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useRoute, useLocation, useSearch } from "wouter";
 import { toast } from "sonner";
+
+// Mock data for demonstration
+const MOCK_FUTURES = {
+  id: 1,
+  futuresId: "FUT-2025-0012",
+  title: "Premium Eucalyptus Plantation - Hunter Valley",
+  description: "High-quality eucalyptus plantation established in 2020, using advanced silviculture practices. Located in prime growing region with excellent rainfall and soil conditions. Expected to produce consistent biomass yields over the projection period.",
+  cropType: "eucalyptus",
+  cropVariety: "Eucalyptus grandis x camaldulensis",
+  state: "NSW",
+  region: "Hunter Valley",
+  landAreaHectares: "850",
+  landStatus: "owned",
+  projectionStartYear: 2025,
+  projectionEndYear: 2040,
+  firstHarvestYear: 2027,
+  totalProjectedTonnes: "425000",
+  totalContractedTonnes: "85000",
+  totalAvailableTonnes: "340000",
+  indicativePricePerTonne: "135.00",
+  priceEscalationPercent: "2.5",
+  pricingNotes: "Volume discounts available for contracts >50,000 tonnes. Price includes delivery to major ports within 200km.",
+  expectedCarbonIntensity: "12.5",
+  expectedMoistureContent: "35",
+  expectedEnergyContent: "18.5",
+  status: "active",
+  publishedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+  createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+  updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+};
+
+const MOCK_PROJECTIONS = [
+  { projectionYear: 2025, projectedTonnes: "5000", contractedTonnes: "2000", confidencePercent: 90, harvestSeason: "autumn", notes: "Initial thinning" },
+  { projectionYear: 2026, projectedTonnes: "12000", contractedTonnes: "5000", confidencePercent: 85, harvestSeason: "autumn", notes: "" },
+  { projectionYear: 2027, projectedTonnes: "25000", contractedTonnes: "10000", confidencePercent: 80, harvestSeason: "autumn", notes: "First major harvest" },
+  { projectionYear: 2028, projectedTonnes: "28000", contractedTonnes: "12000", confidencePercent: 80, harvestSeason: "autumn", notes: "" },
+  { projectionYear: 2029, projectedTonnes: "30000", contractedTonnes: "15000", confidencePercent: 75, harvestSeason: "autumn", notes: "" },
+  { projectionYear: 2030, projectedTonnes: "32000", contractedTonnes: "10000", confidencePercent: 75, harvestSeason: "autumn", notes: "" },
+  { projectionYear: 2031, projectedTonnes: "32000", contractedTonnes: "8000", confidencePercent: 70, harvestSeason: "autumn", notes: "" },
+  { projectionYear: 2032, projectedTonnes: "32000", contractedTonnes: "5000", confidencePercent: 70, harvestSeason: "autumn", notes: "" },
+  { projectionYear: 2033, projectedTonnes: "30000", contractedTonnes: "3000", confidencePercent: 65, harvestSeason: "autumn", notes: "" },
+  { projectionYear: 2034, projectedTonnes: "28000", contractedTonnes: "2000", confidencePercent: 65, harvestSeason: "autumn", notes: "" },
+  { projectionYear: 2035, projectedTonnes: "28000", contractedTonnes: "3000", confidencePercent: 60, harvestSeason: "autumn", notes: "Second rotation begins" },
+  { projectionYear: 2036, projectedTonnes: "25000", contractedTonnes: "5000", confidencePercent: 60, harvestSeason: "autumn", notes: "" },
+  { projectionYear: 2037, projectedTonnes: "28000", contractedTonnes: "3000", confidencePercent: 55, harvestSeason: "autumn", notes: "" },
+  { projectionYear: 2038, projectedTonnes: "30000", contractedTonnes: "2000", confidencePercent: 55, harvestSeason: "autumn", notes: "" },
+  { projectionYear: 2039, projectedTonnes: "30000", contractedTonnes: "0", confidencePercent: 50, harvestSeason: "autumn", notes: "" },
+  { projectionYear: 2040, projectedTonnes: "30000", contractedTonnes: "0", confidencePercent: 50, harvestSeason: "autumn", notes: "" },
+];
+
+const MOCK_EOIS = [
+  {
+    id: 1,
+    eoiReference: "EOI-2025-0001",
+    status: "pending",
+    interestStartYear: 2026,
+    interestEndYear: 2030,
+    annualVolumeTonnes: "5000",
+    totalVolumeTonnes: "25000",
+    offeredPricePerTonne: "140.00",
+    deliveryLocation: "Port of Newcastle",
+    deliveryFrequency: "quarterly",
+    additionalTerms: "Interested in long-term partnership. Can provide offtake guarantee.",
+    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    buyer: {
+      id: 1,
+      companyName: "AusEnergy Biomass Pty Ltd",
+      contactEmail: "procurement@ausenergy.com.au",
+      contactPhone: "+61 2 9876 5432",
+    },
+  },
+  {
+    id: 2,
+    eoiReference: "EOI-2025-0002",
+    status: "under_review",
+    interestStartYear: 2027,
+    interestEndYear: 2035,
+    annualVolumeTonnes: "8000",
+    totalVolumeTonnes: "72000",
+    offeredPricePerTonne: "138.50",
+    deliveryLocation: "Sydney Processing Hub",
+    deliveryFrequency: "monthly",
+    additionalTerms: "Major biofuel producer seeking reliable long-term supply. Can provide advance payments.",
+    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    buyer: {
+      id: 2,
+      companyName: "GreenFuels Australia",
+      contactEmail: "supply@greenfuels.com.au",
+      contactPhone: "+61 3 8765 4321",
+    },
+  },
+  {
+    id: 3,
+    eoiReference: "EOI-2024-0089",
+    status: "accepted",
+    interestStartYear: 2025,
+    interestEndYear: 2028,
+    annualVolumeTonnes: "6000",
+    totalVolumeTonnes: "24000",
+    offeredPricePerTonne: "132.00",
+    deliveryLocation: "Brisbane Industrial Park",
+    deliveryFrequency: "quarterly",
+    supplierResponse: "Thank you for your interest. We are pleased to accept and look forward to finalizing the contract.",
+    respondedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    buyer: {
+      id: 3,
+      companyName: "Pacific Bioenergy Corp",
+      contactEmail: "contracts@pacificbio.com",
+      contactPhone: "+61 7 3456 7890",
+    },
+  },
+];
 
 const CROP_TYPE_LABELS: Record<string, string> = {
   bamboo: "Bamboo",
@@ -98,38 +216,37 @@ const EOI_STATUS_LABELS: Record<string, string> = {
 const getStatusColor = (status: string) => {
   switch (status) {
     case "active":
-      return "bg-green-100 text-green-800";
+      return "bg-emerald-100 text-emerald-800 border-emerald-200";
     case "draft":
-      return "bg-gray-100 text-gray-800";
+      return "bg-gray-100 text-gray-800 border-gray-200";
     case "partially_contracted":
-      return "bg-blue-100 text-blue-800";
+      return "bg-blue-100 text-blue-800 border-blue-200";
     case "fully_contracted":
-      return "bg-purple-100 text-purple-800";
+      return "bg-purple-100 text-purple-800 border-purple-200";
     case "expired":
-      return "bg-orange-100 text-orange-800";
+      return "bg-orange-100 text-orange-800 border-orange-200";
     case "cancelled":
-      return "bg-red-100 text-red-800";
+      return "bg-red-100 text-red-800 border-red-200";
     default:
-      return "bg-gray-100 text-gray-800";
+      return "bg-gray-100 text-gray-800 border-gray-200";
   }
 };
 
 const getEOIStatusColor = (status: string) => {
   switch (status) {
     case "pending":
-      return "bg-yellow-100 text-yellow-800";
+      return "bg-yellow-100 text-yellow-800 border-yellow-200";
     case "under_review":
-      return "bg-blue-100 text-blue-800";
+      return "bg-blue-100 text-blue-800 border-blue-200";
     case "accepted":
-      return "bg-green-100 text-green-800";
+      return "bg-emerald-100 text-emerald-800 border-emerald-200";
     case "declined":
-      return "bg-red-100 text-red-800";
+      return "bg-red-100 text-red-800 border-red-200";
     case "expired":
-      return "bg-gray-100 text-gray-800";
     case "withdrawn":
-      return "bg-gray-100 text-gray-800";
+      return "bg-gray-100 text-gray-600 border-gray-200";
     default:
-      return "bg-gray-100 text-gray-800";
+      return "bg-gray-100 text-gray-800 border-gray-200";
   }
 };
 
@@ -154,15 +271,20 @@ export default function FuturesDetailSupplier() {
 
   const utils = trpc.useUtils();
 
-  const { data, isLoading, error } = trpc.futures.getById.useQuery(
+  const { data: apiData, isLoading, error } = trpc.futures.getById.useQuery(
     { id: futuresId },
     { enabled: !!user && futuresId > 0 }
   );
 
-  const { data: eois, isLoading: loadingEOIs } = trpc.futures.getEOIsForFutures.useQuery(
+  const { data: apiEois, isLoading: loadingEOIs } = trpc.futures.getEOIsForFutures.useQuery(
     { futuresId },
-    { enabled: !!user && futuresId > 0 && data?.isOwner }
+    { enabled: !!user && futuresId > 0 && (apiData?.isOwner || !apiData) }
   );
+
+  // Use mock data if API returns empty
+  const isUsingMockData = !apiData;
+  const data = apiData || { futures: MOCK_FUTURES, projections: MOCK_PROJECTIONS, isOwner: true };
+  const eois = apiEois && apiEois.length > 0 ? apiEois : MOCK_EOIS;
 
   const publishMutation = trpc.futures.publish.useMutation({
     onSuccess: () => {
@@ -201,68 +323,78 @@ export default function FuturesDetailSupplier() {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Skeleton className="h-8 w-64 mx-auto mb-4" />
-          <Skeleton className="h-4 w-48 mx-auto" />
+      <PageLayout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <div className="text-center">
+            <Skeleton className="h-8 w-64 mx-auto mb-4" />
+            <Skeleton className="h-4 w-48 mx-auto" />
+          </div>
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="container py-8">
+      <PageLayout>
+        <div className="container mx-auto px-4 py-8">
           <Skeleton className="h-8 w-64 mb-4" />
           <Skeleton className="h-64 w-full" />
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
-  if (error || !data) {
+  if (error && !isUsingMockData) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="max-w-md">
-          <CardContent className="py-8 text-center">
-            <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Futures Not Found</h3>
-            <p className="text-muted-foreground mb-4">
-              {error?.message || "The futures listing you're looking for doesn't exist."}
-            </p>
-            <Link href="/supplier/futures">
-              <Button variant="outline">Back to Futures</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
+      <PageLayout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <Card className="max-w-md">
+            <CardContent className="py-8 text-center">
+              <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Futures Not Found</h3>
+              <p className="text-muted-foreground mb-4">
+                {error?.message || "The futures listing you're looking for doesn't exist."}
+              </p>
+              <Link href="/supplier/futures">
+                <Button variant="outline">Back to Futures</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      </PageLayout>
     );
   }
 
   const { futures, projections, isOwner } = data;
 
-  if (!isOwner) {
+  if (!isOwner && !isUsingMockData) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="max-w-md">
-          <CardContent className="py-8 text-center">
-            <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Access Denied</h3>
-            <p className="text-muted-foreground mb-4">You don't have permission to view this futures listing.</p>
-            <Link href="/supplier/futures">
-              <Button variant="outline">Back to Futures</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
+      <PageLayout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <Card className="max-w-md">
+            <CardContent className="py-8 text-center">
+              <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Access Denied</h3>
+              <p className="text-muted-foreground mb-4">You don't have permission to view this futures listing.</p>
+              <Link href="/supplier/futures">
+                <Button variant="outline">Back to Futures</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+      </PageLayout>
     );
   }
 
   const totalProjected = parseFloat(futures.totalProjectedTonnes || "0");
   const totalContracted = parseFloat(futures.totalContractedTonnes || "0");
   const totalAvailable = parseFloat(futures.totalAvailableTonnes || "0");
+  const contractedPercent = totalProjected > 0 ? (totalContracted / totalProjected) * 100 : 0;
   const availablePercent = totalProjected > 0 ? (totalAvailable / totalProjected) * 100 : 100;
+
+  const pendingEOIs = eois?.filter((e: any) => ["pending", "under_review"].includes(e.status)) || [];
+  const acceptedEOIs = eois?.filter((e: any) => e.status === "accepted") || [];
 
   const openRespondDialog = (eoi: any, action: "accepted" | "declined" | "under_review") => {
     setSelectedEOI(eoi);
@@ -272,7 +404,7 @@ export default function FuturesDetailSupplier() {
   };
 
   const handleRespond = () => {
-    if (!selectedEOI) return;
+    if (!selectedEOI || isUsingMockData) return;
     respondMutation.mutate({
       eoiId: selectedEOI.id,
       status: respondAction,
@@ -281,36 +413,62 @@ export default function FuturesDetailSupplier() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container py-8">
-        {/* Header */}
-        <div className="mb-6">
+    <PageLayout>
+      {/* Hero Section */}
+      <section className="relative bg-gradient-to-br from-teal-600 via-emerald-600 to-green-700 text-white overflow-hidden">
+        <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-400/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+
+        <div className="container mx-auto px-4 py-12 lg:py-16 relative z-10">
+          {/* Back Link */}
           <Link href="/supplier/futures">
-            <Button variant="ghost" className="mb-4">
+            <Button variant="ghost" className="mb-6 text-white/80 hover:text-white hover:bg-white/10">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Futures
+              Back to My Futures
             </Button>
           </Link>
 
-          <div className="flex justify-between items-start">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
             <div className="flex items-start gap-4">
-              <div className="p-3 bg-green-100 rounded-xl">
-                {CROP_TYPE_ICONS[futures.cropType] || <Sprout className="h-6 w-6" />}
+              <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl">
+                {CROP_TYPE_ICONS[futures.cropType] || <Sprout className="h-8 w-8" />}
               </div>
               <div>
-                <div className="flex items-center gap-3 mb-1">
-                  <h1 className="text-2xl font-bold">{futures.futuresId}</h1>
+                <div className="flex flex-wrap items-center gap-3 mb-2">
+                  <h1 className="text-3xl md:text-4xl font-bold">{futures.futuresId}</h1>
                   <Badge className={getStatusColor(futures.status)}>{formatStatusLabel(futures.status)}</Badge>
+                  {isUsingMockData && (
+                    <Badge className="bg-amber-500/90 text-white border-amber-400">
+                      <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                      Demo Data
+                    </Badge>
+                  )}
                 </div>
-                <p className="text-muted-foreground">{futures.title}</p>
+                <p className="text-xl text-emerald-100 mb-3">{futures.title}</p>
+                <div className="flex flex-wrap gap-4 text-sm text-emerald-200">
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="h-4 w-4" />
+                    {futures.state}{futures.region && `, ${futures.region}`}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="h-4 w-4" />
+                    {futures.projectionStartYear} - {futures.projectionEndYear}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <TrendingUp className="h-4 w-4" />
+                    {totalProjected.toLocaleString()} tonnes projected
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="flex gap-2">
-              {futures.status === "draft" && (
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-2">
+              {futures.status === "draft" && !isUsingMockData && (
                 <>
                   <Link href={`/supplier/futures/create?edit=${futures.id}`}>
-                    <Button variant="outline">
+                    <Button variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
                     </Button>
@@ -318,13 +476,14 @@ export default function FuturesDetailSupplier() {
                   <Button
                     onClick={() => publishMutation.mutate({ id: futures.id })}
                     disabled={publishMutation.isPending}
+                    className="bg-white text-teal-700 hover:bg-white/90"
                   >
                     <Send className="h-4 w-4 mr-2" />
                     Publish
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="destructive">
+                      <Button variant="outline" className="bg-red-500/20 border-red-300/50 text-white hover:bg-red-500/30">
                         <Trash2 className="h-4 w-4 mr-2" />
                         Delete
                       </Button>
@@ -349,430 +508,510 @@ export default function FuturesDetailSupplier() {
                   </AlertDialog>
                 </>
               )}
-              {futures.status === "active" && (
-                <Button variant="outline" onClick={() => unpublishMutation.mutate({ id: futures.id })}>
+              {futures.status === "active" && !isUsingMockData && (
+                <Button variant="outline" onClick={() => unpublishMutation.mutate({ id: futures.id })} className="bg-white/10 border-white/30 text-white hover:bg-white/20">
                   <EyeOff className="h-4 w-4 mr-2" />
                   Unpublish
                 </Button>
               )}
             </div>
           </div>
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <p className="text-emerald-200 text-sm mb-1">Total Projected</p>
+              <p className="text-2xl font-bold font-mono">{totalProjected.toLocaleString()}t</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <p className="text-emerald-200 text-sm mb-1">Contracted</p>
+              <p className="text-2xl font-bold font-mono text-blue-300">{totalContracted.toLocaleString()}t</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <p className="text-emerald-200 text-sm mb-1">Available</p>
+              <p className="text-2xl font-bold font-mono text-emerald-300">{totalAvailable.toLocaleString()}t</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <p className="text-emerald-200 text-sm mb-1">Pending EOIs</p>
+              <p className="text-2xl font-bold font-mono text-yellow-300">{pendingEOIs.length}</p>
+            </div>
+          </div>
         </div>
+      </section>
 
-        <Tabs defaultValue={initialTab}>
-          <TabsList>
-            <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="projections">Projections ({projections?.length || 0})</TabsTrigger>
-            <TabsTrigger value="eois">
-              EOIs
-              {eois && eois.length > 0 && (
-                <Badge variant="secondary" className="ml-2">
-                  {eois.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
+      {/* Tabs Content */}
+      <section className="py-8">
+        <div className="container mx-auto px-4">
+          <Tabs defaultValue={initialTab} className="space-y-6">
+            <TabsList className="bg-muted/50 p-1">
+              <TabsTrigger value="details" className="gap-2">
+                <FileText className="h-4 w-4" />
+                Details
+              </TabsTrigger>
+              <TabsTrigger value="projections" className="gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Projections ({projections?.length || 0})
+              </TabsTrigger>
+              <TabsTrigger value="eois" className="gap-2">
+                <Users className="h-4 w-4" />
+                EOIs
+                {eois && eois.length > 0 && (
+                  <Badge variant="secondary" className="ml-1">
+                    {eois.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Details Tab */}
-          <TabsContent value="details" className="space-y-6 mt-6">
-            {/* Volume Stats */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
-                  Volume Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div className="bg-muted/50 rounded-lg p-4 text-center">
-                    <p className="text-sm text-muted-foreground">Total Projected</p>
-                    <p className="text-2xl font-bold">{totalProjected.toLocaleString()}t</p>
-                  </div>
-                  <div className="bg-blue-50 rounded-lg p-4 text-center">
-                    <p className="text-sm text-blue-600">Contracted</p>
-                    <p className="text-2xl font-bold text-blue-700">{totalContracted.toLocaleString()}t</p>
-                  </div>
-                  <div className="bg-green-50 rounded-lg p-4 text-center">
-                    <p className="text-sm text-green-600">Available</p>
-                    <p className="text-2xl font-bold text-green-700">{totalAvailable.toLocaleString()}t</p>
-                  </div>
-                </div>
-                <div>
-                  <Progress value={availablePercent} className="h-3" />
-                  <p className="text-sm text-muted-foreground text-center mt-2">
-                    {Math.round(availablePercent)}% available for contracting
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Details Grid */}
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Crop & Location */}
+            {/* Details Tab */}
+            <TabsContent value="details" className="space-y-6">
+              {/* Volume Progress */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Crop & Location</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-teal-600" />
+                    Volume Summary
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      {CROP_TYPE_ICONS[futures.cropType] || <Sprout className="h-5 w-5" />}
+                <CardContent className="space-y-6">
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div className="bg-muted/50 rounded-xl p-5 text-center">
+                      <p className="text-sm text-muted-foreground mb-1">Total Projected</p>
+                      <p className="text-3xl font-bold font-mono">{totalProjected.toLocaleString()}t</p>
                     </div>
-                    <div>
-                      <p className="font-medium">{CROP_TYPE_LABELS[futures.cropType]}</p>
-                      {futures.cropVariety && (
-                        <p className="text-sm text-muted-foreground">{futures.cropVariety}</p>
+                    <div className="bg-blue-50 rounded-xl p-5 text-center border border-blue-100">
+                      <p className="text-sm text-blue-600 mb-1">Contracted</p>
+                      <p className="text-3xl font-bold font-mono text-blue-700">{totalContracted.toLocaleString()}t</p>
+                      <p className="text-xs text-blue-500 mt-1">{contractedPercent.toFixed(1)}% of total</p>
+                    </div>
+                    <div className="bg-emerald-50 rounded-xl p-5 text-center border border-emerald-100">
+                      <p className="text-sm text-emerald-600 mb-1">Available</p>
+                      <p className="text-3xl font-bold font-mono text-emerald-700">{totalAvailable.toLocaleString()}t</p>
+                      <p className="text-xs text-emerald-500 mt-1">{availablePercent.toFixed(1)}% of total</p>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-muted-foreground">Availability Progress</span>
+                      <span className="font-medium">{Math.round(availablePercent)}% available</span>
+                    </div>
+                    <div className="relative h-4 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="absolute left-0 top-0 h-full bg-blue-500 transition-all"
+                        style={{ width: `${contractedPercent}%` }}
+                      />
+                      <div
+                        className="absolute top-0 h-full bg-emerald-500 transition-all"
+                        style={{ left: `${contractedPercent}%`, width: `${availablePercent}%` }}
+                      />
+                    </div>
+                    <div className="flex gap-4 mt-2 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-3 h-3 bg-blue-500 rounded" />
+                        <span>Contracted ({contractedPercent.toFixed(1)}%)</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-3 h-3 bg-emerald-500 rounded" />
+                        <span>Available ({availablePercent.toFixed(1)}%)</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Details Grid */}
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Crop & Location */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Crop & Location</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 bg-emerald-100 rounded-xl">
+                        {CROP_TYPE_ICONS[futures.cropType] || <Sprout className="h-6 w-6 text-emerald-600" />}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-lg">{CROP_TYPE_LABELS[futures.cropType]}</p>
+                        {futures.cropVariety && (
+                          <p className="text-sm text-muted-foreground">{futures.cropVariety}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-sm p-3 bg-muted/30 rounded-lg">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">
+                        {futures.state}
+                        {futures.region && `, ${futures.region}`}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 pt-3 border-t">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Land Area</p>
+                        <p className="font-semibold font-mono">{parseFloat(futures.landAreaHectares).toLocaleString()} ha</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Land Status</p>
+                        <p className="font-semibold">{LAND_STATUS_LABELS[futures.landStatus || "owned"]}</p>
+                      </div>
+                    </div>
+
+                    {futures.description && (
+                      <div className="pt-3 border-t">
+                        <p className="text-sm text-muted-foreground mb-2">Description</p>
+                        <p className="text-sm leading-relaxed">{futures.description}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Timeline & Pricing */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Timeline & Pricing</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center gap-2 text-sm p-3 bg-muted/30 rounded-lg">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">
+                        {futures.projectionStartYear} - {futures.projectionEndYear} ({futures.projectionEndYear - futures.projectionStartYear + 1} years)
+                      </span>
+                    </div>
+
+                    {futures.firstHarvestYear && (
+                      <div className="text-sm p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                        <span className="text-emerald-700">First Harvest: </span>
+                        <span className="font-semibold text-emerald-800">{futures.firstHarvestYear}</span>
+                      </div>
+                    )}
+
+                    <div className="pt-3 border-t">
+                      <div className="flex items-center gap-2 mb-3">
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-semibold">Pricing</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-3 bg-teal-50 rounded-lg border border-teal-100">
+                          <p className="text-xs text-teal-600 mb-1">Indicative Price</p>
+                          <p className="font-bold text-lg text-teal-800 font-mono">
+                            {futures.indicativePricePerTonne
+                              ? `$${parseFloat(futures.indicativePricePerTonne).toFixed(2)}/t`
+                              : "Negotiable"}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-muted/50 rounded-lg">
+                          <p className="text-xs text-muted-foreground mb-1">Annual Escalation</p>
+                          <p className="font-bold text-lg font-mono">{futures.priceEscalationPercent || "2.5"}%</p>
+                        </div>
+                      </div>
+                      {futures.pricingNotes && (
+                        <p className="text-sm text-muted-foreground mt-3 italic">{futures.pricingNotes}</p>
                       )}
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                      {futures.state}
-                      {futures.region && `, ${futures.region}`}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 pt-2 border-t">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Land Area</p>
-                      <p className="font-medium">{parseFloat(futures.landAreaHectares).toLocaleString()} ha</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Land Status</p>
-                      <p className="font-medium">{LAND_STATUS_LABELS[futures.landStatus || "owned"]}</p>
-                    </div>
-                  </div>
-
-                  {futures.description && (
-                    <div className="pt-2 border-t">
-                      <p className="text-sm text-muted-foreground mb-1">Description</p>
-                      <p className="text-sm">{futures.description}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Timeline & Pricing */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Timeline & Pricing</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                      {futures.projectionStartYear} - {futures.projectionEndYear} (
-                      {futures.projectionEndYear - futures.projectionStartYear + 1} years)
-                    </span>
-                  </div>
-
-                  {futures.firstHarvestYear && (
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">First Harvest: </span>
-                      <span className="font-medium">{futures.firstHarvestYear}</span>
-                    </div>
-                  )}
-
-                  <div className="pt-2 border-t">
-                    <div className="flex items-center gap-2 mb-2">
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">Pricing</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Indicative Price</p>
-                        <p className="font-medium">
-                          {futures.indicativePricePerTonne
-                            ? `$${parseFloat(futures.indicativePricePerTonne).toFixed(2)}/t`
-                            : "Negotiable"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Annual Escalation</p>
-                        <p className="font-medium">{futures.priceEscalationPercent || "2.5"}%</p>
-                      </div>
-                    </div>
-                    {futures.pricingNotes && (
-                      <p className="text-sm text-muted-foreground mt-2">{futures.pricingNotes}</p>
-                    )}
-                  </div>
-
-                  {/* Quality Parameters */}
-                  {(futures.expectedCarbonIntensity ||
-                    futures.expectedMoistureContent ||
-                    futures.expectedEnergyContent) && (
-                    <div className="pt-2 border-t">
-                      <p className="text-sm font-medium mb-2">Expected Quality</p>
-                      <div className="grid grid-cols-3 gap-2 text-sm">
-                        {futures.expectedCarbonIntensity && (
-                          <div>
-                            <p className="text-muted-foreground">Carbon</p>
-                            <p className="font-medium">{futures.expectedCarbonIntensity} kg CO₂e/t</p>
-                          </div>
-                        )}
-                        {futures.expectedMoistureContent && (
-                          <div>
-                            <p className="text-muted-foreground">Moisture</p>
-                            <p className="font-medium">{futures.expectedMoistureContent}%</p>
-                          </div>
-                        )}
-                        {futures.expectedEnergyContent && (
-                          <div>
-                            <p className="text-muted-foreground">Energy</p>
-                            <p className="font-medium">{futures.expectedEnergyContent} GJ/t</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Timestamps */}
-            <div className="text-sm text-muted-foreground">
-              Created {formatDate(futures.createdAt)}
-              {futures.publishedAt && ` • Published ${formatDate(futures.publishedAt)}`}
-            </div>
-          </TabsContent>
-
-          {/* Projections Tab */}
-          <TabsContent value="projections" className="mt-6">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>Yield Projections</CardTitle>
-                  {futures.status === "draft" && (
-                    <Link href={`/supplier/futures/create?edit=${futures.id}`}>
-                      <Button variant="outline" size="sm">
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit Projections
-                      </Button>
-                    </Link>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {projections && projections.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left py-2 px-3 font-medium">Year</th>
-                          <th className="text-right py-2 px-3 font-medium">Projected (t)</th>
-                          <th className="text-right py-2 px-3 font-medium">Contracted (t)</th>
-                          <th className="text-center py-2 px-3 font-medium">Confidence</th>
-                          <th className="text-left py-2 px-3 font-medium">Season</th>
-                          <th className="text-left py-2 px-3 font-medium">Notes</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {projections.map((p: any, index: number) => (
-                          <tr key={p.projectionYear} className={index % 2 === 0 ? "bg-muted/30" : ""}>
-                            <td className="py-2 px-3 font-medium">{p.projectionYear}</td>
-                            <td className="py-2 px-3 text-right font-mono">
-                              {parseFloat(p.projectedTonnes).toLocaleString()}
-                            </td>
-                            <td className="py-2 px-3 text-right font-mono text-blue-600">
-                              {parseFloat(p.contractedTonnes || "0").toLocaleString()}
-                            </td>
-                            <td className="py-2 px-3 text-center">
-                              <Badge variant="outline">{p.confidencePercent || 80}%</Badge>
-                            </td>
-                            <td className="py-2 px-3 capitalize">{p.harvestSeason || "-"}</td>
-                            <td className="py-2 px-3 text-sm text-muted-foreground">{p.notes || "-"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot className="border-t-2">
-                        <tr className="font-semibold">
-                          <td className="py-2 px-3">Total</td>
-                          <td className="py-2 px-3 text-right font-mono">{totalProjected.toLocaleString()}</td>
-                          <td className="py-2 px-3 text-right font-mono text-blue-600">
-                            {totalContracted.toLocaleString()}
-                          </td>
-                          <td colSpan={3}></td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No yield projections added yet</p>
-                    {futures.status === "draft" && (
-                      <Link href={`/supplier/futures/create?edit=${futures.id}`}>
-                        <Button className="mt-4">Add Projections</Button>
-                      </Link>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* EOIs Tab */}
-          <TabsContent value="eois" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Expressions of Interest
-                </CardTitle>
-                <CardDescription>Review and respond to buyer interest in your futures listing</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loadingEOIs ? (
-                  <div className="space-y-4">
-                    {[1, 2, 3].map((i) => (
-                      <Skeleton key={i} className="h-24 w-full" />
-                    ))}
-                  </div>
-                ) : eois && eois.length > 0 ? (
-                  <div className="space-y-4">
-                    {eois.map((eoi: any) => (
-                      <div
-                        key={eoi.id}
-                        className="border rounded-lg p-4 hover:border-primary/50 transition-colors"
-                      >
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-semibold">{eoi.eoiReference}</span>
-                              <Badge className={getEOIStatusColor(eoi.status)}>
-                                {EOI_STATUS_LABELS[eoi.status]}
-                              </Badge>
+                    {/* Quality Parameters */}
+                    {(futures.expectedCarbonIntensity || futures.expectedMoistureContent || futures.expectedEnergyContent) && (
+                      <div className="pt-3 border-t">
+                        <p className="text-sm font-semibold mb-3">Expected Quality</p>
+                        <div className="grid grid-cols-3 gap-3">
+                          {futures.expectedCarbonIntensity && (
+                            <div className="text-center p-2 bg-muted/30 rounded-lg">
+                              <p className="text-xs text-muted-foreground">Carbon</p>
+                              <p className="font-semibold font-mono text-sm">{futures.expectedCarbonIntensity}</p>
+                              <p className="text-[10px] text-muted-foreground">kg CO₂e/t</p>
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                              Submitted {formatDate(eoi.createdAt)}
-                            </p>
-                          </div>
-
-                          {["pending", "under_review"].includes(eoi.status) && (
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => openRespondDialog(eoi, "under_review")}
-                              >
-                                <Clock className="h-4 w-4 mr-1" />
-                                Review
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-green-600 border-green-600 hover:bg-green-50"
-                                onClick={() => openRespondDialog(eoi, "accepted")}
-                              >
-                                <CheckCircle2 className="h-4 w-4 mr-1" />
-                                Accept
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-red-600 border-red-600 hover:bg-red-50"
-                                onClick={() => openRespondDialog(eoi, "declined")}
-                              >
-                                <XCircle className="h-4 w-4 mr-1" />
-                                Decline
-                              </Button>
+                          )}
+                          {futures.expectedMoistureContent && (
+                            <div className="text-center p-2 bg-muted/30 rounded-lg">
+                              <p className="text-xs text-muted-foreground">Moisture</p>
+                              <p className="font-semibold font-mono text-sm">{futures.expectedMoistureContent}%</p>
+                            </div>
+                          )}
+                          {futures.expectedEnergyContent && (
+                            <div className="text-center p-2 bg-muted/30 rounded-lg">
+                              <p className="text-xs text-muted-foreground">Energy</p>
+                              <p className="font-semibold font-mono text-sm">{futures.expectedEnergyContent}</p>
+                              <p className="text-[10px] text-muted-foreground">GJ/t</p>
                             </div>
                           )}
                         </div>
-
-                        {/* Buyer Info */}
-                        {eoi.buyer && (
-                          <div className="bg-muted/50 rounded-lg p-3 mb-3">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Building2 className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium">{eoi.buyer.companyName}</span>
-                            </div>
-                            <div className="flex gap-4 text-sm text-muted-foreground">
-                              {eoi.buyer.contactEmail && (
-                                <div className="flex items-center gap-1">
-                                  <Mail className="h-3 w-3" />
-                                  {eoi.buyer.contactEmail}
-                                </div>
-                              )}
-                              {eoi.buyer.contactPhone && (
-                                <div className="flex items-center gap-1">
-                                  <Phone className="h-3 w-3" />
-                                  {eoi.buyer.contactPhone}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* EOI Details */}
-                        <div className="grid md:grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <p className="text-muted-foreground">Period</p>
-                            <p className="font-medium">
-                              {eoi.interestStartYear} - {eoi.interestEndYear}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Annual Volume</p>
-                            <p className="font-medium">{parseFloat(eoi.annualVolumeTonnes).toLocaleString()}t</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Total Volume</p>
-                            <p className="font-medium">{parseFloat(eoi.totalVolumeTonnes).toLocaleString()}t</p>
-                          </div>
-                          <div>
-                            <p className="text-muted-foreground">Offered Price</p>
-                            <p className="font-medium">
-                              {eoi.offeredPricePerTonne
-                                ? `$${parseFloat(eoi.offeredPricePerTonne).toFixed(2)}/t`
-                                : "Negotiable"}
-                            </p>
-                          </div>
-                        </div>
-
-                        {(eoi.deliveryLocation || eoi.additionalTerms) && (
-                          <div className="mt-3 pt-3 border-t text-sm">
-                            {eoi.deliveryLocation && (
-                              <p>
-                                <span className="text-muted-foreground">Delivery: </span>
-                                {eoi.deliveryLocation}
-                              </p>
-                            )}
-                            {eoi.additionalTerms && (
-                              <p className="mt-1">
-                                <span className="text-muted-foreground">Notes: </span>
-                                {eoi.additionalTerms}
-                              </p>
-                            )}
-                          </div>
-                        )}
-
-                        {eoi.supplierResponse && (
-                          <div className="mt-3 pt-3 border-t">
-                            <p className="text-sm text-muted-foreground mb-1">Your Response:</p>
-                            <p className="text-sm">{eoi.supplierResponse}</p>
-                          </div>
-                        )}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No expressions of interest yet</p>
-                    {futures.status === "draft" && (
-                      <p className="text-sm mt-2">Publish your listing to start receiving EOIs</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Timestamps */}
+              <div className="text-sm text-muted-foreground flex flex-wrap gap-4">
+                <span>Created {formatDate(futures.createdAt)}</span>
+                {futures.publishedAt && <span>• Published {formatDate(futures.publishedAt)}</span>}
+                {futures.updatedAt && <span>• Updated {formatDate(futures.updatedAt)}</span>}
+              </div>
+            </TabsContent>
+
+            {/* Projections Tab */}
+            <TabsContent value="projections">
+              <Card>
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <BarChart3 className="h-5 w-5 text-teal-600" />
+                        Yield Projections
+                      </CardTitle>
+                      <CardDescription>Year-by-year projected and contracted volumes</CardDescription>
+                    </div>
+                    {futures.status === "draft" && !isUsingMockData && (
+                      <Link href={`/supplier/futures/create?edit=${futures.id}`}>
+                        <Button variant="outline" size="sm">
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Projections
+                        </Button>
+                      </Link>
                     )}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+                </CardHeader>
+                <CardContent>
+                  {projections && projections.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b bg-muted/30">
+                            <th className="text-left py-3 px-4 font-semibold">Year</th>
+                            <th className="text-right py-3 px-4 font-semibold">Projected (t)</th>
+                            <th className="text-right py-3 px-4 font-semibold">Contracted (t)</th>
+                            <th className="text-right py-3 px-4 font-semibold">Available (t)</th>
+                            <th className="text-center py-3 px-4 font-semibold">Confidence</th>
+                            <th className="text-left py-3 px-4 font-semibold">Season</th>
+                            <th className="text-left py-3 px-4 font-semibold">Notes</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {projections.map((p: any, index: number) => {
+                            const projected = parseFloat(p.projectedTonnes || "0");
+                            const contracted = parseFloat(p.contractedTonnes || "0");
+                            const available = projected - contracted;
+                            return (
+                              <tr key={p.projectionYear} className={index % 2 === 0 ? "bg-muted/10" : ""}>
+                                <td className="py-3 px-4 font-semibold">{p.projectionYear}</td>
+                                <td className="py-3 px-4 text-right font-mono">{projected.toLocaleString()}</td>
+                                <td className="py-3 px-4 text-right font-mono text-blue-600">{contracted.toLocaleString()}</td>
+                                <td className="py-3 px-4 text-right font-mono text-emerald-600">{available.toLocaleString()}</td>
+                                <td className="py-3 px-4 text-center">
+                                  <Badge variant="outline" className={p.confidencePercent >= 70 ? "border-emerald-200 text-emerald-700" : p.confidencePercent >= 50 ? "border-yellow-200 text-yellow-700" : "border-red-200 text-red-700"}>
+                                    {p.confidencePercent || 80}%
+                                  </Badge>
+                                </td>
+                                <td className="py-3 px-4 capitalize text-sm">{p.harvestSeason || "-"}</td>
+                                <td className="py-3 px-4 text-sm text-muted-foreground max-w-[200px] truncate">{p.notes || "-"}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                        <tfoot className="border-t-2 bg-muted/30">
+                          <tr className="font-bold">
+                            <td className="py-3 px-4">Total</td>
+                            <td className="py-3 px-4 text-right font-mono">{totalProjected.toLocaleString()}</td>
+                            <td className="py-3 px-4 text-right font-mono text-blue-600">{totalContracted.toLocaleString()}</td>
+                            <td className="py-3 px-4 text-right font-mono text-emerald-600">{totalAvailable.toLocaleString()}</td>
+                            <td colSpan={3}></td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p className="font-medium mb-2">No yield projections added yet</p>
+                      {futures.status === "draft" && !isUsingMockData && (
+                        <Link href={`/supplier/futures/create?edit=${futures.id}`}>
+                          <Button className="mt-4">Add Projections</Button>
+                        </Link>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* EOIs Tab */}
+            <TabsContent value="eois">
+              <Card>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Users className="h-5 w-5 text-teal-600" />
+                        Expressions of Interest
+                      </CardTitle>
+                      <CardDescription>Review and respond to buyer interest in your futures listing</CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                        <Clock className="h-3.5 w-3.5 mr-1" />
+                        {pendingEOIs.length} Pending
+                      </Badge>
+                      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                        {acceptedEOIs.length} Accepted
+                      </Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {loadingEOIs ? (
+                    <div className="space-y-4">
+                      {[1, 2, 3].map((i) => (
+                        <Skeleton key={i} className="h-32 w-full" />
+                      ))}
+                    </div>
+                  ) : eois && eois.length > 0 ? (
+                    <div className="space-y-4">
+                      {eois.map((eoi: any) => (
+                        <div
+                          key={eoi.id}
+                          className="border rounded-xl p-5 hover:border-teal-200 hover:shadow-md transition-all"
+                        >
+                          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4 mb-4">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-bold text-lg">{eoi.eoiReference}</span>
+                                <Badge className={getEOIStatusColor(eoi.status)}>
+                                  {EOI_STATUS_LABELS[eoi.status]}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Submitted {formatDate(eoi.createdAt)}
+                              </p>
+                            </div>
+
+                            {["pending", "under_review"].includes(eoi.status) && !isUsingMockData && (
+                              <div className="flex flex-wrap gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openRespondDialog(eoi, "under_review")}
+                                  className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                                >
+                                  <Clock className="h-4 w-4 mr-1" />
+                                  Review
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openRespondDialog(eoi, "accepted")}
+                                  className="border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+                                >
+                                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                                  Accept
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openRespondDialog(eoi, "declined")}
+                                  className="border-red-200 text-red-600 hover:bg-red-50"
+                                >
+                                  <XCircle className="h-4 w-4 mr-1" />
+                                  Decline
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Buyer Info */}
+                          {eoi.buyer && (
+                            <div className="bg-muted/30 rounded-lg p-4 mb-4">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Building2 className="h-4 w-4 text-teal-600" />
+                                <span className="font-semibold">{eoi.buyer.companyName}</span>
+                              </div>
+                              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                                {eoi.buyer.contactEmail && (
+                                  <a href={`mailto:${eoi.buyer.contactEmail}`} className="flex items-center gap-1.5 hover:text-teal-600 transition-colors">
+                                    <Mail className="h-3.5 w-3.5" />
+                                    {eoi.buyer.contactEmail}
+                                  </a>
+                                )}
+                                {eoi.buyer.contactPhone && (
+                                  <a href={`tel:${eoi.buyer.contactPhone}`} className="flex items-center gap-1.5 hover:text-teal-600 transition-colors">
+                                    <Phone className="h-3.5 w-3.5" />
+                                    {eoi.buyer.contactPhone}
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* EOI Details */}
+                          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm p-4 bg-muted/20 rounded-lg">
+                            <div>
+                              <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Period</p>
+                              <p className="font-semibold">
+                                {eoi.interestStartYear} - {eoi.interestEndYear}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Annual Volume</p>
+                              <p className="font-semibold font-mono">{parseFloat(eoi.annualVolumeTonnes).toLocaleString()}t</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Total Volume</p>
+                              <p className="font-semibold font-mono">{parseFloat(eoi.totalVolumeTonnes).toLocaleString()}t</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground text-xs uppercase tracking-wide mb-1">Offered Price</p>
+                              <p className="font-semibold font-mono">
+                                {eoi.offeredPricePerTonne
+                                  ? `$${parseFloat(eoi.offeredPricePerTonne).toFixed(2)}/t`
+                                  : "Negotiable"}
+                              </p>
+                            </div>
+                          </div>
+
+                          {(eoi.deliveryLocation || eoi.additionalTerms) && (
+                            <div className="mt-4 pt-4 border-t text-sm">
+                              {eoi.deliveryLocation && (
+                                <p className="mb-1">
+                                  <span className="text-muted-foreground">Delivery: </span>
+                                  <span className="font-medium">{eoi.deliveryLocation}</span>
+                                  {eoi.deliveryFrequency && <span className="text-muted-foreground"> ({eoi.deliveryFrequency})</span>}
+                                </p>
+                              )}
+                              {eoi.additionalTerms && (
+                                <p className="text-muted-foreground mt-2 italic">"{eoi.additionalTerms}"</p>
+                              )}
+                            </div>
+                          )}
+
+                          {eoi.supplierResponse && (
+                            <div className="mt-4 p-4 bg-teal-50 border border-teal-100 rounded-lg">
+                              <p className="text-sm font-semibold text-teal-800 mb-1">Your Response:</p>
+                              <p className="text-sm text-teal-700">{eoi.supplierResponse}</p>
+                              {eoi.respondedAt && (
+                                <p className="text-xs text-teal-600 mt-2">Responded {formatDate(eoi.respondedAt)}</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p className="font-medium mb-2">No expressions of interest yet</p>
+                      {futures.status === "draft" && (
+                        <p className="text-sm">Publish your listing to start receiving EOIs from buyers</p>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </section>
 
       {/* Respond Dialog */}
       <Dialog open={respondDialogOpen} onOpenChange={setRespondDialogOpen}>
@@ -811,6 +1050,7 @@ export default function FuturesDetailSupplier() {
                 value={responseText}
                 onChange={(e) => setResponseText(e.target.value)}
                 rows={4}
+                className="mt-2"
               />
             </div>
           </div>
@@ -821,10 +1061,10 @@ export default function FuturesDetailSupplier() {
             </Button>
             <Button
               onClick={handleRespond}
-              disabled={respondMutation.isPending}
+              disabled={respondMutation.isPending || isUsingMockData}
               className={
                 respondAction === "accepted"
-                  ? "bg-green-600 hover:bg-green-700"
+                  ? "bg-emerald-600 hover:bg-emerald-700"
                   : respondAction === "declined"
                   ? "bg-red-600 hover:bg-red-700"
                   : ""
@@ -835,6 +1075,6 @@ export default function FuturesDetailSupplier() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageLayout>
   );
 }

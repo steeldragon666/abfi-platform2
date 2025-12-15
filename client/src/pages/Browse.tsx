@@ -4,11 +4,137 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AUSTRALIAN_STATES, FEEDSTOCK_CATEGORIES, formatDate, formatPrice, getScoreGrade } from "@/const";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AUSTRALIAN_STATES, FEEDSTOCK_CATEGORIES, formatPrice, getScoreGrade } from "@/const";
 import { trpc } from "@/lib/trpc";
-import { Award, Filter, Leaf, MapPin, TrendingUp } from "lucide-react";
+import { PageLayout, PageContainer } from "@/components/layout";
+import { Award, Filter, MapPin, TrendingUp, Leaf, ChevronRight, Zap, ShieldCheck, Package, X } from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
+import { cn } from "@/lib/utils";
+
+// Mock data for demonstration
+const MOCK_FEEDSTOCKS = [
+  {
+    id: 1,
+    abfiId: "ABFI-2024-0001",
+    type: "Sugarcane Bagasse",
+    category: "agricultural_residue",
+    state: "QLD",
+    region: "Mackay",
+    abfiScore: 92,
+    annualCapacityTonnes: 250000,
+    availableVolumeCurrent: 85000,
+    pricePerTonne: 45,
+    priceVisibility: "public",
+    carbonIntensityValue: 12.5,
+    verificationLevel: "third_party_verified",
+    description: "High-quality bagasse from sustainable sugarcane operations with established logistics.",
+    supplierName: "Queensland Sugar Ltd",
+  },
+  {
+    id: 2,
+    abfiId: "ABFI-2024-0002",
+    type: "Wheat Straw",
+    category: "agricultural_residue",
+    state: "NSW",
+    region: "Riverina",
+    abfiScore: 85,
+    annualCapacityTonnes: 180000,
+    availableVolumeCurrent: 120000,
+    pricePerTonne: 38,
+    priceVisibility: "public",
+    carbonIntensityValue: 15.2,
+    verificationLevel: "self_declared",
+    description: "Post-harvest wheat straw aggregated from multiple farms in the Riverina region.",
+    supplierName: "Riverina Agri Co-op",
+  },
+  {
+    id: 3,
+    abfiId: "ABFI-2024-0003",
+    type: "Eucalyptus Plantation",
+    category: "plantation_forestry",
+    state: "VIC",
+    region: "Gippsland",
+    abfiScore: 88,
+    annualCapacityTonnes: 320000,
+    availableVolumeCurrent: 200000,
+    pricePerTonne: 65,
+    priceVisibility: "public",
+    carbonIntensityValue: 8.3,
+    verificationLevel: "third_party_verified",
+    description: "FSC-certified eucalyptus plantation with proven carbon credentials.",
+    supplierName: "Gippsland Plantations",
+  },
+  {
+    id: 4,
+    abfiId: "ABFI-2024-0004",
+    type: "Canola Meal",
+    category: "processing_residue",
+    state: "SA",
+    region: "Adelaide Plains",
+    abfiScore: 78,
+    annualCapacityTonnes: 95000,
+    availableVolumeCurrent: 45000,
+    pricePerTonne: 85,
+    priceVisibility: "public",
+    carbonIntensityValue: 22.1,
+    verificationLevel: "platform_verified",
+    description: "By-product from canola oil processing with consistent supply chain.",
+    supplierName: "SA Oilseeds Processing",
+  },
+  {
+    id: 5,
+    abfiId: "ABFI-2024-0005",
+    type: "Mixed Softwood",
+    category: "native_forestry",
+    state: "TAS",
+    region: "North West",
+    abfiScore: 82,
+    annualCapacityTonnes: 150000,
+    availableVolumeCurrent: 90000,
+    pricePerTonne: 55,
+    priceVisibility: "public",
+    carbonIntensityValue: 10.8,
+    verificationLevel: "third_party_verified",
+    description: "Sustainably harvested native forestry residues from certified operations.",
+    supplierName: "Tasmanian Timber Co",
+  },
+  {
+    id: 6,
+    abfiId: "ABFI-2024-0006",
+    type: "Cotton Gin Trash",
+    category: "agricultural_residue",
+    state: "QLD",
+    region: "Darling Downs",
+    abfiScore: 75,
+    annualCapacityTonnes: 65000,
+    availableVolumeCurrent: 40000,
+    pricePerTonne: 32,
+    priceVisibility: "public",
+    carbonIntensityValue: 18.5,
+    verificationLevel: "self_declared",
+    description: "Seasonal cotton processing residue available post-harvest.",
+    supplierName: "Downs Cotton Growers",
+  },
+];
+
+const SCORE_COLORS: Record<string, string> = {
+  AAA: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  AA: "bg-green-100 text-green-700 border-green-200",
+  A: "bg-lime-100 text-lime-700 border-lime-200",
+  BBB: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  BB: "bg-amber-100 text-amber-700 border-amber-200",
+  B: "bg-orange-100 text-orange-700 border-orange-200",
+  CCC: "bg-red-100 text-red-700 border-red-200",
+};
+
+const VERIFICATION_CONFIG: Record<string, { label: string; color: string }> = {
+  third_party_verified: { label: "Third-Party Verified", color: "bg-emerald-100 text-emerald-700" },
+  platform_verified: { label: "Platform Verified", color: "bg-blue-100 text-blue-700" },
+  self_declared: { label: "Self-Declared", color: "bg-slate-100 text-slate-700" },
+};
 
 export default function Browse() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -18,7 +144,7 @@ export default function Browse() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
-  const { data: feedstocks, isLoading } = trpc.feedstocks.search.useQuery({
+  const { data: apiData, isLoading } = trpc.feedstocks.search.useQuery({
     category: selectedCategories.length > 0 ? selectedCategories : undefined,
     state: selectedStates.length > 0 ? selectedStates : undefined,
     minAbfiScore: minScore,
@@ -27,129 +153,193 @@ export default function Browse() {
     offset: (page - 1) * pageSize,
   });
 
+  // Use mock data if no real data
+  const feedstocks = apiData && apiData.length > 0 ? apiData : MOCK_FEEDSTOCKS;
+  const isUsingMockData = !apiData || apiData.length === 0;
+
   const totalPages = feedstocks ? Math.ceil(feedstocks.length / pageSize) : 0;
 
   const toggleCategory = (cat: string) => {
-    setSelectedCategories(prev =>
-      prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+    setSelectedCategories((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
     );
   };
 
   const toggleState = (state: string) => {
-    setSelectedStates(prev =>
-      prev.includes(state) ? prev.filter(s => s !== state) : [...prev, state]
+    setSelectedStates((prev) =>
+      prev.includes(state) ? prev.filter((s) => s !== state) : [...prev, state]
     );
   };
 
+  const clearFilters = () => {
+    setSelectedCategories([]);
+    setSelectedStates([]);
+    setMinScore(undefined);
+    setMaxCarbon(undefined);
+  };
+
+  const hasFilters = selectedCategories.length > 0 || selectedStates.length > 0 || minScore || maxCarbon;
+
+  // Calculate stats
+  const totalVolume = feedstocks.reduce((sum, f: any) => sum + (f.availableVolumeCurrent || 0), 0);
+  const avgScore = feedstocks.reduce((sum, f: any) => sum + (f.abfiScore || 0), 0) / feedstocks.length;
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="border-b bg-white">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/">
-            <div className="flex items-center gap-2 cursor-pointer">
-              <Leaf className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold text-primary">ABFI</span>
+    <PageLayout>
+      {/* Hero Section */}
+      <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-green-900 text-white py-16 lg:py-20 relative overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-1/4 -right-1/4 w-[600px] h-[600px] rounded-full bg-green-500/10 blur-[100px]" />
+          <div className="absolute -bottom-1/4 -left-1/4 w-[400px] h-[400px] rounded-full bg-lime-500/10 blur-[80px]" />
+        </div>
+
+        <PageContainer className="relative z-10" padding="none">
+          <div className="max-w-3xl">
+            <div className="flex flex-wrap gap-2 mb-6">
+              <Badge variant="outline" className="border-green-400/50 text-green-300 bg-green-500/10">
+                <Package className="h-3 w-3 mr-1" />
+                Verified Supply
+              </Badge>
+              {isUsingMockData && (
+                <Badge variant="outline" className="border-amber-400/50 text-amber-300 bg-amber-500/10">
+                  Demo Data
+                </Badge>
+              )}
             </div>
-          </Link>
-          <Link href="/">
-            <Button variant="ghost">Back to Home</Button>
-          </Link>
-        </div>
-      </header>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-primary mb-2">Browse Feedstocks</h1>
-          <p className="text-gray-600">
-            Discover verified biofuel feedstock sources across Australia
-          </p>
-        </div>
+            <h1 className="text-4xl lg:text-5xl font-display font-bold mb-4">
+              Browse Feedstocks
+            </h1>
+            <p className="text-xl text-slate-300 mb-8 leading-relaxed">
+              Discover verified biofuel feedstock sources across Australia. Compare ABFI scores,
+              carbon intensity, and availability from qualified suppliers.
+            </p>
 
-        <div className="grid lg:grid-cols-4 gap-6">
+            <div className="flex flex-wrap gap-3">
+              <Badge className="bg-white/10 text-white border-white/20 py-2 px-4">
+                <Leaf className="h-4 w-4 mr-2" />
+                Multiple Categories
+              </Badge>
+              <Badge className="bg-white/10 text-white border-white/20 py-2 px-4">
+                <Award className="h-4 w-4 mr-2" />
+                ABFI Scored
+              </Badge>
+              <Badge className="bg-white/10 text-white border-white/20 py-2 px-4">
+                <ShieldCheck className="h-4 w-4 mr-2" />
+                Verified Supply
+              </Badge>
+            </div>
+          </div>
+
+          {/* Stats Row */}
+          <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 text-center">
+              <div className="text-3xl font-bold font-mono text-white">{feedstocks.length}</div>
+              <div className="text-sm text-slate-400 mt-1">Listings</div>
+            </div>
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 text-center">
+              <div className="text-3xl font-bold font-mono text-green-400">{(totalVolume / 1000).toFixed(0)}k</div>
+              <div className="text-sm text-slate-400 mt-1">Tonnes Available</div>
+            </div>
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 text-center">
+              <div className="text-3xl font-bold font-mono text-white">{avgScore.toFixed(0)}</div>
+              <div className="text-sm text-slate-400 mt-1">Avg ABFI Score</div>
+            </div>
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4 text-center">
+              <div className="text-3xl font-bold font-mono text-white">6</div>
+              <div className="text-sm text-slate-400 mt-1">States</div>
+            </div>
+          </div>
+        </PageContainer>
+      </section>
+
+      <PageContainer>
+        <div className="grid lg:grid-cols-4 gap-6 -mt-4">
           {/* Filters Sidebar */}
           <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Filter className="h-5 w-5" />
-                  Filters
-                </CardTitle>
+            <Card className="sticky top-20 shadow-lg">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Filter className="h-5 w-5 text-primary" />
+                    Filters
+                  </CardTitle>
+                  {hasFilters && (
+                    <Button variant="ghost" size="sm" onClick={clearFilters}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Category Filter */}
                 <div>
-                  <Label className="mb-2 block">Feedstock Category</Label>
+                  <Label className="text-sm font-medium mb-3 block">Feedstock Category</Label>
                   <div className="space-y-2">
-                    {FEEDSTOCK_CATEGORIES.map(cat => (
-                      <label key={cat.value} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
+                    {FEEDSTOCK_CATEGORIES.map((cat) => (
+                      <div key={cat.value} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`cat-${cat.value}`}
                           checked={selectedCategories.includes(cat.value)}
-                          onChange={() => toggleCategory(cat.value)}
-                          className="rounded border-gray-300"
+                          onCheckedChange={() => toggleCategory(cat.value)}
                         />
-                        <span className="text-sm">{cat.label}</span>
-                      </label>
+                        <Label htmlFor={`cat-${cat.value}`} className="text-sm cursor-pointer">
+                          {cat.label}
+                        </Label>
+                      </div>
                     ))}
                   </div>
                 </div>
 
                 {/* State Filter */}
                 <div>
-                  <Label className="mb-2 block">State</Label>
-                  <div className="space-y-2">
-                    {AUSTRALIAN_STATES.map(state => (
-                      <label key={state.value} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
+                  <Label className="text-sm font-medium mb-3 block">State</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {AUSTRALIAN_STATES.map((state) => (
+                      <div key={state.value} className="flex items-center gap-1.5">
+                        <Checkbox
+                          id={`state-${state.value}`}
                           checked={selectedStates.includes(state.value)}
-                          onChange={() => toggleState(state.value)}
-                          className="rounded border-gray-300"
+                          onCheckedChange={() => toggleState(state.value)}
                         />
-                        <span className="text-sm">{state.value}</span>
-                      </label>
+                        <Label htmlFor={`state-${state.value}`} className="text-xs cursor-pointer">
+                          {state.value}
+                        </Label>
+                      </div>
                     ))}
                   </div>
                 </div>
 
                 {/* ABFI Score Filter */}
                 <div>
-                  <Label htmlFor="minScore">Minimum ABFI Score</Label>
+                  <Label htmlFor="minScore" className="text-sm font-medium">Min ABFI Score</Label>
                   <Input
                     id="minScore"
                     type="number"
                     min="0"
                     max="100"
                     placeholder="e.g., 70"
-                    value={minScore || ''}
+                    value={minScore || ""}
                     onChange={(e) => setMinScore(e.target.value ? Number(e.target.value) : undefined)}
+                    className="mt-1"
                   />
                 </div>
 
                 {/* Carbon Intensity Filter */}
                 <div>
-                  <Label htmlFor="maxCarbon">Max Carbon Intensity (gCO2e/MJ)</Label>
+                  <Label htmlFor="maxCarbon" className="text-sm font-medium">Max Carbon (gCO2e/MJ)</Label>
                   <Input
                     id="maxCarbon"
                     type="number"
                     min="0"
                     placeholder="e.g., 50"
-                    value={maxCarbon || ''}
+                    value={maxCarbon || ""}
                     onChange={(e) => setMaxCarbon(e.target.value ? Number(e.target.value) : undefined)}
+                    className="mt-1"
                   />
                 </div>
 
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    setSelectedCategories([]);
-                    setSelectedStates([]);
-                    setMinScore(undefined);
-                    setMaxCarbon(undefined);
-                  }}
-                >
+                <Button variant="outline" className="w-full" onClick={clearFilters}>
                   Clear All Filters
                 </Button>
               </CardContent>
@@ -158,178 +348,224 @@ export default function Browse() {
 
           {/* Results Grid */}
           <div className="lg:col-span-3">
-            <div className="mb-4 flex justify-between items-center">
-              <p className="text-gray-600">
-                {isLoading ? 'Loading...' : `${feedstocks?.length || 0} feedstocks found`}
+            <div className="mb-6 flex justify-between items-center">
+              <p className="text-muted-foreground">
+                <strong className="text-foreground">{feedstocks?.length || 0}</strong> feedstocks found
+                {isUsingMockData && <span className="ml-2 text-amber-600">(Demo data)</span>}
               </p>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/feedstock-map">
+                  <MapPin className="h-4 w-4 mr-1" />
+                  View on Map
+                </Link>
+              </Button>
             </div>
 
             {isLoading ? (
               <div className="grid md:grid-cols-2 gap-6">
-                {[1, 2, 3, 4].map(i => (
+                {[1, 2, 3, 4].map((i) => (
                   <Card key={i}>
                     <CardHeader>
                       <Skeleton className="h-6 w-3/4 mb-2" />
                       <Skeleton className="h-4 w-1/2" />
                     </CardHeader>
                     <CardContent>
-                      <Skeleton className="h-20 w-full" />
+                      <Skeleton className="h-24 w-full" />
                     </CardContent>
                   </Card>
                 ))}
               </div>
             ) : feedstocks && feedstocks.length > 0 ? (
               <div className="grid md:grid-cols-2 gap-6">
-                {feedstocks.map(feedstock => (
-                  <Card key={feedstock.id} className="hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <CardTitle className="text-lg">{feedstock.type}</CardTitle>
-                          <CardDescription className="flex items-center gap-1 mt-1">
-                            <MapPin className="h-3 w-3" />
-                            {feedstock.state} • {feedstock.abfiId}
-                          </CardDescription>
-                        </div>
-                        <div className="text-right">
-                          <div className="flex items-center gap-1 text-primary font-bold text-xl">
-                            <Award className="h-5 w-5" />
-                            {feedstock.abfiScore || 'N/A'}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {feedstock.abfiScore ? getScoreGrade(feedstock.abfiScore) : ''}
-                          </div>
-                        </div>
-                      </div>
+                {feedstocks.map((feedstock: any) => {
+                  const grade = feedstock.abfiScore ? getScoreGrade(feedstock.abfiScore) : null;
+                  const verificationConfig = VERIFICATION_CONFIG[feedstock.verificationLevel] || VERIFICATION_CONFIG.self_declared;
 
-                      <div className="flex gap-2 flex-wrap mt-2">
-                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                          {FEEDSTOCK_CATEGORIES.find(c => c.value === feedstock.category)?.label}
-                        </span>
-                        {feedstock.carbonIntensityValue && (
-                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                            {feedstock.carbonIntensityValue} gCO2e/MJ
-                          </span>
+                  return (
+                    <Card key={feedstock.id} className="hover:shadow-lg transition-all group border-2 border-transparent hover:border-primary/20">
+                      <CardHeader className="pb-3">
+                        <div className="flex justify-between items-start gap-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                                {feedstock.type}
+                              </CardTitle>
+                            </div>
+                            <CardDescription className="flex items-center gap-2">
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {feedstock.state}
+                                {feedstock.region && `, ${feedstock.region}`}
+                              </span>
+                              <span className="text-muted-foreground">•</span>
+                              <span className="font-mono text-xs">{feedstock.abfiId}</span>
+                            </CardDescription>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className="flex items-center gap-1.5 justify-end">
+                              <Award className="h-5 w-5 text-primary" />
+                              <span className="text-2xl font-bold font-mono">{feedstock.abfiScore || "N/A"}</span>
+                            </div>
+                            {grade && (
+                              <Badge className={cn("text-xs mt-1", SCORE_COLORS[grade])}>
+                                {grade}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 flex-wrap mt-3">
+                          <Badge variant="outline" className="text-xs">
+                            {FEEDSTOCK_CATEGORIES.find((c) => c.value === feedstock.category)?.label}
+                          </Badge>
+                          <Badge className={cn("text-xs", verificationConfig.color)}>
+                            {verificationConfig.label}
+                          </Badge>
+                          {feedstock.carbonIntensityValue && (
+                            <Badge variant="outline" className="text-xs font-mono">
+                              {feedstock.carbonIntensityValue} gCO2e/MJ
+                            </Badge>
+                          )}
+                        </div>
+                      </CardHeader>
+
+                      <CardContent className="space-y-4">
+                        {/* Volume Stats */}
+                        <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Annual Capacity</span>
+                            <span className="font-medium font-mono">
+                              {feedstock.annualCapacityTonnes.toLocaleString()} t
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Available Now</span>
+                            <span className="font-semibold text-green-600 font-mono">
+                              {feedstock.availableVolumeCurrent.toLocaleString()} t
+                            </span>
+                          </div>
+                          {feedstock.pricePerTonne && feedstock.priceVisibility === "public" && (
+                            <div className="flex justify-between text-sm pt-2 border-t border-border/50">
+                              <span className="text-muted-foreground">Price</span>
+                              <span className="font-semibold font-mono">
+                                {formatPrice(feedstock.pricePerTonne)}/t
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Supplier */}
+                        {feedstock.supplierName && (
+                          <div className="text-sm text-muted-foreground">
+                            <span className="font-medium text-foreground">{feedstock.supplierName}</span>
+                          </div>
                         )}
-                      </div>
-                    </CardHeader>
 
-                    <CardContent>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Annual Capacity:</span>
-                          <span className="font-medium">{feedstock.annualCapacityTonnes.toLocaleString()} tonnes</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Available Now:</span>
-                          <span className="font-medium">{feedstock.availableVolumeCurrent.toLocaleString()} tonnes</span>
-                        </div>
-                        {feedstock.pricePerTonne && feedstock.priceVisibility === 'public' && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Price:</span>
-                            <span className="font-medium">{formatPrice(feedstock.pricePerTonne)}/tonne</span>
-                          </div>
+                        {feedstock.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {feedstock.description}
+                          </p>
                         )}
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Verification:</span>
-                          <span className="font-medium capitalize">{feedstock.verificationLevel?.replace('_', ' ')}</span>
+
+                        {/* Actions */}
+                        <div className="flex gap-2 pt-2 border-t">
+                          <Link href={`/feedstock/${feedstock.id}`} className="flex-1">
+                            <Button className="w-full" size="sm">
+                              View Details
+                              <ChevronRight className="h-4 w-4 ml-1" />
+                            </Button>
+                          </Link>
+                          <Link href={`/inquiry/send?feedstockId=${feedstock.id}`}>
+                            <Button variant="outline" size="sm">
+                              Inquire
+                            </Button>
+                          </Link>
                         </div>
-                      </div>
-
-                      {feedstock.description && (
-                        <p className="text-sm text-gray-600 mt-3 truncate-2">
-                          {feedstock.description}
-                        </p>
-                      )}
-
-                      <div className="mt-4 flex gap-2">
-                        <Link href={`/feedstock/${feedstock.id}`} className="flex-1">
-                          <Button className="w-full" size="sm">
-                            View Details
-                          </Button>
-                        </Link>
-                        <Link href={`/inquiry/send?feedstockId=${feedstock.id}`}>
-                          <Button variant="outline" size="sm">
-                            Send Inquiry
-                          </Button>
-                        </Link>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             ) : (
               <Card>
-                <CardContent className="py-12 text-center">
-                  <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <CardContent className="py-16 text-center">
+                  <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No feedstocks found</h3>
-                  <p className="text-gray-600">
+                  <p className="text-muted-foreground mb-4">
                     Try adjusting your filters or check back later for new listings
                   </p>
+                  {hasFilters && (
+                    <Button variant="outline" onClick={clearFilters}>
+                      Clear Filters
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             )}
 
             {/* Pagination */}
-            {feedstocks && feedstocks.length > 0 && (
+            {feedstocks && feedstocks.length > pageSize && (
               <div className="mt-8 flex items-center justify-between border-t pt-6">
                 <div className="flex items-center gap-4">
-                  <Label>Items per page:</Label>
-                  <Select value={pageSize.toString()} onValueChange={(v) => { setPageSize(parseInt(v)); setPage(1); }}>
-                    <SelectTrigger className="w-24">
+                  <Label className="text-sm">Items per page:</Label>
+                  <Select
+                    value={pageSize.toString()}
+                    onValueChange={(v) => {
+                      setPageSize(parseInt(v));
+                      setPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="w-20">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="10">10</SelectItem>
                       <SelectItem value="25">25</SelectItem>
                       <SelectItem value="50">50</SelectItem>
-                      <SelectItem value="100">100</SelectItem>
                     </SelectContent>
                   </Select>
-                  <span className="text-sm text-gray-600">
-                    Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, feedstocks.length)} of {feedstocks.length}
-                  </span>
                 </div>
 
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
                     Previous
                   </Button>
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      const pageNum = i + 1;
-                      return (
-                        <Button
-                          key={pageNum}
-                          variant={page === pageNum ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setPage(pageNum)}
-                          className="w-10"
-                        >
-                          {pageNum}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
                     Next
                   </Button>
                 </div>
               </div>
             )}
+
+            {/* CTA Section */}
+            <section className="mt-12 mb-8">
+              <Card className="bg-gradient-to-r from-green-500/5 to-lime-500/5 border-green-500/20">
+                <CardContent className="py-8">
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div>
+                      <h3 className="text-xl font-semibold mb-2">Want to list your feedstock?</h3>
+                      <p className="text-muted-foreground">
+                        Register as a supplier and list your biomass feedstock to reach verified buyers.
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <Button variant="outline" asChild>
+                        <Link href="/for-growers">Learn More</Link>
+                      </Button>
+                      <Button asChild>
+                        <Link href="/producer-registration">
+                          <Leaf className="h-4 w-4 mr-2" />
+                          Register Supply
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
           </div>
         </div>
-      </div>
-    </div>
+      </PageContainer>
+    </PageLayout>
   );
 }

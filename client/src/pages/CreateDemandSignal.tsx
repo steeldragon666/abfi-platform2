@@ -1,3 +1,6 @@
+/**
+ * CreateDemandSignal - Multi-step form for creating feedstock demand signals.
+ */
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
@@ -6,13 +9,39 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Send, FileText } from "lucide-react";
+import { PageLayout, PageContainer } from "@/components/layout";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Send,
+  FileText,
+  Package,
+  Beaker,
+  MapPin,
+  DollarSign,
+  Calendar,
+  Leaf,
+  CheckCircle2,
+} from "lucide-react";
+
+const STEPS = [
+  { id: 1, title: "Basics", icon: Package },
+  { id: 2, title: "Volume", icon: Package },
+  { id: 3, title: "Quality", icon: Beaker },
+  { id: 4, title: "Delivery", icon: MapPin },
+  { id: 5, title: "Pricing", icon: DollarSign },
+  { id: 6, title: "Timeline", icon: Calendar },
+  { id: 7, title: "Review", icon: CheckCircle2 },
+];
 
 export default function CreateDemandSignal() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -49,7 +78,7 @@ export default function CreateDemandSignal() {
 
   const handleSubmit = (e: React.FormEvent, status: "draft" | "published") => {
     e.preventDefault();
-    
+
     createMutation.mutate({
       ...formData,
       status,
@@ -74,34 +103,102 @@ export default function CreateDemandSignal() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const nextStep = () => setCurrentStep(s => Math.min(s + 1, STEPS.length));
+  const prevStep = () => setCurrentStep(s => Math.max(s - 1, 1));
+  const progress = (currentStep / STEPS.length) * 100;
+
+  const getCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      agricultural_residue: "Agricultural Residue",
+      forestry_residue: "Forestry Residue",
+      energy_crop: "Energy Crop",
+      organic_waste: "Organic Waste",
+      algae_aquatic: "Algae/Aquatic",
+      mixed: "Mixed",
+    };
+    return labels[category] || category;
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container max-w-4xl py-8">
-        <Button
-          variant="ghost"
-          onClick={() => setLocation("/demand-signals")}
-          className="mb-6"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Demand Signals
-        </Button>
+    <PageLayout>
+      {/* Hero Section */}
+      <section className="bg-gradient-to-br from-purple-900 via-indigo-900 to-slate-900 text-white">
+        <PageContainer size="lg" padding="md" className="py-8">
+          <Button
+            variant="ghost"
+            onClick={() => setLocation("/demand-signals")}
+            className="mb-4 text-white/80 hover:text-white hover:bg-white/10"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Demand Signals
+          </Button>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Post Demand Signal</h1>
-          <p className="text-muted-foreground">
-            Specify your feedstock requirements to connect with verified suppliers
-          </p>
-        </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-display font-bold mb-2">
+                Post Demand Signal
+              </h1>
+              <p className="text-white/70">
+                Specify your feedstock requirements to connect with verified suppliers
+              </p>
+            </div>
+            <div className="hidden md:flex items-center gap-2">
+              <Badge variant="outline" className="text-white border-white/30">
+                Step {currentStep} of {STEPS.length}
+              </Badge>
+            </div>
+          </div>
+        </PageContainer>
+      </section>
 
+      {/* Progress Bar */}
+      <div className="sticky top-0 z-10 bg-background border-b">
+        <PageContainer size="lg" padding="none" className="py-4">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            {STEPS.map((step, index) => {
+              const Icon = step.icon;
+              const isActive = currentStep === step.id;
+              const isComplete = currentStep > step.id;
+
+              return (
+                <button
+                  key={step.id}
+                  onClick={() => setCurrentStep(step.id)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg whitespace-nowrap transition-all ${
+                    isActive
+                      ? "bg-primary text-white"
+                      : isComplete
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="text-sm font-medium">{step.title}</span>
+                  {isComplete && <CheckCircle2 className="h-4 w-4" />}
+                </button>
+              );
+            })}
+          </div>
+          <Progress value={progress} className="h-1 mt-2" />
+        </PageContainer>
+      </div>
+
+      {/* Form Content */}
+      <PageContainer size="md" padding="md">
         <form onSubmit={(e) => handleSubmit(e, "published")}>
-          <div className="space-y-6">
-            {/* Basic Information */}
+          {/* Step 1: Basic Information */}
+          {currentStep === 1 && (
             <Card>
               <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
-                <CardDescription>Provide an overview of your feedstock requirements</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5 text-primary" />
+                  Basic Information
+                </CardTitle>
+                <CardDescription>
+                  Provide an overview of your feedstock requirements
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 <div>
                   <Label htmlFor="title">Signal Title *</Label>
                   <Input
@@ -109,8 +206,12 @@ export default function CreateDemandSignal() {
                     value={formData.title}
                     onChange={(e) => updateField("title", e.target.value)}
                     placeholder="e.g., Wheat Straw Required for Bioenergy Project"
+                    className="mt-1.5"
                     required
                   />
+                  <p className="text-sm text-muted-foreground mt-1.5">
+                    A clear title helps suppliers quickly understand your needs
+                  </p>
                 </div>
 
                 <div>
@@ -119,20 +220,12 @@ export default function CreateDemandSignal() {
                     id="description"
                     value={formData.description}
                     onChange={(e) => updateField("description", e.target.value)}
-                    placeholder="Provide additional context about your requirements..."
+                    placeholder="Provide additional context about your requirements, project timeline, and any specific needs..."
                     rows={4}
+                    className="mt-1.5"
                   />
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Feedstock Specifications */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Feedstock Specifications</CardTitle>
-                <CardDescription>Define the type and category of feedstock needed</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="feedstockType">Feedstock Type *</Label>
@@ -141,6 +234,7 @@ export default function CreateDemandSignal() {
                       value={formData.feedstockType}
                       onChange={(e) => updateField("feedstockType", e.target.value)}
                       placeholder="e.g., Wheat Straw, Bagasse"
+                      className="mt-1.5"
                       required
                     />
                   </div>
@@ -151,7 +245,7 @@ export default function CreateDemandSignal() {
                       value={formData.feedstockCategory}
                       onValueChange={(value) => updateField("feedstockCategory", value)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="mt-1.5">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -167,14 +261,21 @@ export default function CreateDemandSignal() {
                 </div>
               </CardContent>
             </Card>
+          )}
 
-            {/* Volume Requirements */}
+          {/* Step 2: Volume Requirements */}
+          {currentStep === 2 && (
             <Card>
               <CardHeader>
-                <CardTitle>Volume Requirements</CardTitle>
-                <CardDescription>Specify quantity and delivery frequency</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5 text-primary" />
+                  Volume Requirements
+                </CardTitle>
+                <CardDescription>
+                  Specify quantity and delivery frequency
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="annualVolume">Annual Volume (tonnes) *</Label>
@@ -184,6 +285,7 @@ export default function CreateDemandSignal() {
                       value={formData.annualVolume}
                       onChange={(e) => updateField("annualVolume", e.target.value)}
                       placeholder="e.g., 50000"
+                      className="mt-1.5"
                       required
                     />
                   </div>
@@ -196,7 +298,11 @@ export default function CreateDemandSignal() {
                       value={formData.volumeFlexibility}
                       onChange={(e) => updateField("volumeFlexibility", e.target.value)}
                       placeholder="e.g., 10"
+                      className="mt-1.5"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Acceptable variation in volume
+                    </p>
                   </div>
 
                   <div>
@@ -205,7 +311,7 @@ export default function CreateDemandSignal() {
                       value={formData.deliveryFrequency}
                       onValueChange={(value) => updateField("deliveryFrequency", value)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="mt-1.5">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -220,16 +326,53 @@ export default function CreateDemandSignal() {
                     </Select>
                   </div>
                 </div>
+
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <h4 className="font-medium mb-2">Volume Calculator</h4>
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <div className="text-muted-foreground">Daily</div>
+                      <div className="font-mono font-medium">
+                        {formData.annualVolume
+                          ? `${Math.round(parseInt(formData.annualVolume) / 365)} t`
+                          : "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">Monthly</div>
+                      <div className="font-mono font-medium">
+                        {formData.annualVolume
+                          ? `${Math.round(parseInt(formData.annualVolume) / 12).toLocaleString()} t`
+                          : "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">Quarterly</div>
+                      <div className="font-mono font-medium">
+                        {formData.annualVolume
+                          ? `${Math.round(parseInt(formData.annualVolume) / 4).toLocaleString()} t`
+                          : "—"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
+          )}
 
-            {/* Quality Specifications */}
+          {/* Step 3: Quality Specifications */}
+          {currentStep === 3 && (
             <Card>
               <CardHeader>
-                <CardTitle>Quality Specifications</CardTitle>
-                <CardDescription>Define quality parameters for the feedstock</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Beaker className="h-5 w-5 text-primary" />
+                  Quality Specifications
+                </CardTitle>
+                <CardDescription>
+                  Define quality parameters for the feedstock (optional but recommended)
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="minMoistureContent">Min Moisture Content (%)</Label>
@@ -239,6 +382,7 @@ export default function CreateDemandSignal() {
                       value={formData.minMoistureContent}
                       onChange={(e) => updateField("minMoistureContent", e.target.value)}
                       placeholder="e.g., 10"
+                      className="mt-1.5"
                     />
                   </div>
 
@@ -250,6 +394,7 @@ export default function CreateDemandSignal() {
                       value={formData.maxMoistureContent}
                       onChange={(e) => updateField("maxMoistureContent", e.target.value)}
                       placeholder="e.g., 15"
+                      className="mt-1.5"
                     />
                   </div>
 
@@ -261,6 +406,7 @@ export default function CreateDemandSignal() {
                       value={formData.minEnergyContent}
                       onChange={(e) => updateField("minEnergyContent", e.target.value)}
                       placeholder="e.g., 14"
+                      className="mt-1.5"
                     />
                   </div>
 
@@ -272,6 +418,7 @@ export default function CreateDemandSignal() {
                       value={formData.maxAshContent}
                       onChange={(e) => updateField("maxAshContent", e.target.value)}
                       placeholder="e.g., 8"
+                      className="mt-1.5"
                     />
                   </div>
 
@@ -283,6 +430,7 @@ export default function CreateDemandSignal() {
                       value={formData.maxChlorineContent}
                       onChange={(e) => updateField("maxChlorineContent", e.target.value)}
                       placeholder="e.g., 500"
+                      className="mt-1.5"
                     />
                   </div>
                 </div>
@@ -293,20 +441,28 @@ export default function CreateDemandSignal() {
                     id="otherQualitySpecs"
                     value={formData.otherQualitySpecs}
                     onChange={(e) => updateField("otherQualitySpecs", e.target.value)}
-                    placeholder="Any additional quality requirements..."
+                    placeholder="Any additional quality requirements (particle size, contamination limits, certifications, etc.)..."
                     rows={3}
+                    className="mt-1.5"
                   />
                 </div>
               </CardContent>
             </Card>
+          )}
 
-            {/* Delivery Requirements */}
+          {/* Step 4: Delivery Requirements */}
+          {currentStep === 4 && (
             <Card>
               <CardHeader>
-                <CardTitle>Delivery Requirements</CardTitle>
-                <CardDescription>Specify delivery location and logistics</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  Delivery Requirements
+                </CardTitle>
+                <CardDescription>
+                  Specify delivery location and logistics preferences
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="deliveryLocation">Delivery Location *</Label>
@@ -315,6 +471,7 @@ export default function CreateDemandSignal() {
                       value={formData.deliveryLocation}
                       onChange={(e) => updateField("deliveryLocation", e.target.value)}
                       placeholder="e.g., Narrabri, NSW"
+                      className="mt-1.5"
                       required
                     />
                   </div>
@@ -325,17 +482,17 @@ export default function CreateDemandSignal() {
                       value={formData.deliveryState}
                       onValueChange={(value) => updateField("deliveryState", value)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="mt-1.5">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="NSW">NSW</SelectItem>
-                        <SelectItem value="VIC">VIC</SelectItem>
-                        <SelectItem value="QLD">QLD</SelectItem>
-                        <SelectItem value="SA">SA</SelectItem>
-                        <SelectItem value="WA">WA</SelectItem>
-                        <SelectItem value="TAS">TAS</SelectItem>
-                        <SelectItem value="NT">NT</SelectItem>
+                        <SelectItem value="NSW">New South Wales</SelectItem>
+                        <SelectItem value="VIC">Victoria</SelectItem>
+                        <SelectItem value="QLD">Queensland</SelectItem>
+                        <SelectItem value="SA">South Australia</SelectItem>
+                        <SelectItem value="WA">Western Australia</SelectItem>
+                        <SelectItem value="TAS">Tasmania</SelectItem>
+                        <SelectItem value="NT">Northern Territory</SelectItem>
                         <SelectItem value="ACT">ACT</SelectItem>
                       </SelectContent>
                     </Select>
@@ -349,7 +506,11 @@ export default function CreateDemandSignal() {
                       value={formData.maxTransportDistance}
                       onChange={(e) => updateField("maxTransportDistance", e.target.value)}
                       placeholder="e.g., 200"
+                      className="mt-1.5"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Leave blank for no restriction
+                    </p>
                   </div>
 
                   <div>
@@ -358,12 +519,12 @@ export default function CreateDemandSignal() {
                       value={formData.deliveryMethod}
                       onValueChange={(value) => updateField("deliveryMethod", value)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="mt-1.5">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="ex_farm">Ex Farm</SelectItem>
-                        <SelectItem value="delivered">Delivered</SelectItem>
+                        <SelectItem value="ex_farm">Ex Farm (Buyer arranges transport)</SelectItem>
+                        <SelectItem value="delivered">Delivered (Supplier arranges)</SelectItem>
                         <SelectItem value="fob_port">FOB Port</SelectItem>
                         <SelectItem value="negotiable">Negotiable</SelectItem>
                       </SelectContent>
@@ -372,14 +533,21 @@ export default function CreateDemandSignal() {
                 </div>
               </CardContent>
             </Card>
+          )}
 
-            {/* Pricing */}
+          {/* Step 5: Pricing */}
+          {currentStep === 5 && (
             <Card>
               <CardHeader>
-                <CardTitle>Pricing</CardTitle>
-                <CardDescription>Provide indicative pricing information</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-primary" />
+                  Pricing
+                </CardTitle>
+                <CardDescription>
+                  Provide indicative pricing information to help suppliers assess fit
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="indicativePriceMin">Min Price (AUD/tonne)</Label>
@@ -389,6 +557,7 @@ export default function CreateDemandSignal() {
                       value={formData.indicativePriceMin}
                       onChange={(e) => updateField("indicativePriceMin", e.target.value)}
                       placeholder="e.g., 80"
+                      className="mt-1.5"
                     />
                   </div>
 
@@ -400,6 +569,7 @@ export default function CreateDemandSignal() {
                       value={formData.indicativePriceMax}
                       onChange={(e) => updateField("indicativePriceMax", e.target.value)}
                       placeholder="e.g., 120"
+                      className="mt-1.5"
                     />
                   </div>
 
@@ -409,28 +579,47 @@ export default function CreateDemandSignal() {
                       value={formData.pricingMechanism}
                       onValueChange={(value) => updateField("pricingMechanism", value)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="mt-1.5">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="fixed">Fixed</SelectItem>
-                        <SelectItem value="indexed">Indexed</SelectItem>
-                        <SelectItem value="spot">Spot</SelectItem>
+                        <SelectItem value="fixed">Fixed Price</SelectItem>
+                        <SelectItem value="indexed">Indexed (CPI/commodity linked)</SelectItem>
+                        <SelectItem value="spot">Spot Market</SelectItem>
                         <SelectItem value="negotiable">Negotiable</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
+
+                {formData.annualVolume && formData.indicativePriceMax && (
+                  <div className="bg-primary/5 rounded-lg p-4 border border-primary/20">
+                    <h4 className="font-medium mb-2">Estimated Annual Value</h4>
+                    <div className="text-2xl font-bold font-mono text-primary">
+                      ${(parseInt(formData.annualVolume) * parseInt(formData.indicativePriceMax)).toLocaleString()} AUD
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Based on max price × annual volume
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
+          )}
 
-            {/* Timeline */}
+          {/* Step 6: Timeline */}
+          {currentStep === 6 && (
             <Card>
               <CardHeader>
-                <CardTitle>Timeline</CardTitle>
-                <CardDescription>Define supply period and response deadline</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  Timeline
+                </CardTitle>
+                <CardDescription>
+                  Define supply period and response deadline
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="supplyStartDate">Supply Start Date *</Label>
@@ -439,6 +628,7 @@ export default function CreateDemandSignal() {
                       type="date"
                       value={formData.supplyStartDate}
                       onChange={(e) => updateField("supplyStartDate", e.target.value)}
+                      className="mt-1.5"
                       required
                     />
                   </div>
@@ -450,6 +640,7 @@ export default function CreateDemandSignal() {
                       type="date"
                       value={formData.supplyEndDate}
                       onChange={(e) => updateField("supplyEndDate", e.target.value)}
+                      className="mt-1.5"
                     />
                   </div>
 
@@ -461,6 +652,7 @@ export default function CreateDemandSignal() {
                       value={formData.contractTerm}
                       onChange={(e) => updateField("contractTerm", e.target.value)}
                       placeholder="e.g., 5"
+                      className="mt-1.5"
                     />
                   </div>
 
@@ -471,55 +663,191 @@ export default function CreateDemandSignal() {
                       type="date"
                       value={formData.responseDeadline}
                       onChange={(e) => updateField("responseDeadline", e.target.value)}
+                      className="mt-1.5"
                       required
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      After this date, no new responses can be submitted
+                    </p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Sustainability */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Sustainability Requirements</CardTitle>
-                <CardDescription>Optional sustainability and certification requirements</CardDescription>
-              </CardHeader>
-              <CardContent>
                 <div>
                   <Label htmlFor="sustainabilityRequirements">Sustainability Requirements</Label>
                   <Textarea
                     id="sustainabilityRequirements"
                     value={formData.sustainabilityRequirements}
                     onChange={(e) => updateField("sustainabilityRequirements", e.target.value)}
-                    placeholder="e.g., ISCC certified, carbon intensity < 40 gCO2e/MJ..."
-                    rows={4}
+                    placeholder="e.g., ISCC certified, carbon intensity < 40 gCO2e/MJ, no deforestation..."
+                    rows={3}
+                    className="mt-1.5"
                   />
                 </div>
               </CardContent>
             </Card>
+          )}
 
-            {/* Actions */}
-            <div className="flex gap-4 justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={(e) => handleSubmit(e as any, "draft")}
-                disabled={createMutation.isPending}
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Save as Draft
-              </Button>
-              <Button
-                type="submit"
-                disabled={createMutation.isPending}
-              >
-                <Send className="h-4 w-4 mr-2" />
-                {createMutation.isPending ? "Publishing..." : "Publish Signal"}
-              </Button>
+          {/* Step 7: Review */}
+          {currentStep === 7 && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                    Review Your Demand Signal
+                  </CardTitle>
+                  <CardDescription>
+                    Please review all details before publishing
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {/* Basic Info */}
+                    <div className="border-b pb-4">
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">BASIC INFORMATION</h4>
+                      <h3 className="text-xl font-semibold">{formData.title || "Untitled Signal"}</h3>
+                      {formData.description && (
+                        <p className="text-muted-foreground mt-2">{formData.description}</p>
+                      )}
+                      <div className="flex gap-2 mt-3">
+                        <Badge>{getCategoryLabel(formData.feedstockCategory)}</Badge>
+                        <Badge variant="outline">{formData.feedstockType || "Not specified"}</Badge>
+                      </div>
+                    </div>
+
+                    {/* Volume */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-b pb-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground">Annual Volume</div>
+                        <div className="font-semibold font-mono">
+                          {formData.annualVolume ? `${parseInt(formData.annualVolume).toLocaleString()} t` : "—"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Flexibility</div>
+                        <div className="font-semibold">
+                          {formData.volumeFlexibility ? `±${formData.volumeFlexibility}%` : "—"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Frequency</div>
+                        <div className="font-semibold capitalize">{formData.deliveryFrequency}</div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Contract Term</div>
+                        <div className="font-semibold">
+                          {formData.contractTerm ? `${formData.contractTerm} years` : "—"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Location & Delivery */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 border-b pb-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground">Delivery Location</div>
+                        <div className="font-semibold">
+                          {formData.deliveryLocation}, {formData.deliveryState}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Delivery Method</div>
+                        <div className="font-semibold capitalize">
+                          {formData.deliveryMethod.replace("_", " ")}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Max Distance</div>
+                        <div className="font-semibold">
+                          {formData.maxTransportDistance ? `${formData.maxTransportDistance} km` : "No limit"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pricing */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 border-b pb-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground">Price Range</div>
+                        <div className="font-semibold font-mono">
+                          {formData.indicativePriceMin && formData.indicativePriceMax
+                            ? `$${formData.indicativePriceMin} - $${formData.indicativePriceMax}/t`
+                            : "Not specified"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Pricing Mechanism</div>
+                        <div className="font-semibold capitalize">{formData.pricingMechanism}</div>
+                      </div>
+                    </div>
+
+                    {/* Timeline */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div>
+                        <div className="text-sm text-muted-foreground">Supply Start</div>
+                        <div className="font-semibold">
+                          {formData.supplyStartDate || "Not set"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Supply End</div>
+                        <div className="font-semibold">
+                          {formData.supplyEndDate || "Open-ended"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-sm text-muted-foreground">Response Deadline</div>
+                        <div className="font-semibold text-red-600">
+                          {formData.responseDeadline || "Not set"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Navigation */}
+          <div className="flex justify-between items-center mt-8 pt-6 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={prevStep}
+              disabled={currentStep === 1}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Previous
+            </Button>
+
+            <div className="flex gap-3">
+              {currentStep === STEPS.length ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={(e) => handleSubmit(e as any, "draft")}
+                    disabled={createMutation.isPending}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Save Draft
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createMutation.isPending || !formData.title || !formData.annualVolume}
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    {createMutation.isPending ? "Publishing..." : "Publish Signal"}
+                  </Button>
+                </>
+              ) : (
+                <Button type="button" onClick={nextStep}>
+                  Next
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              )}
             </div>
           </div>
         </form>
-      </div>
-    </div>
+      </PageContainer>
+    </PageLayout>
   );
 }

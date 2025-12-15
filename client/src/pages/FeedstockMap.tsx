@@ -9,13 +9,15 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Layers, Search, Download, Target, Save, Trash2, FolderOpen, Loader2 } from "lucide-react";
+import { PageLayout, PageContainer } from "@/components/layout";
+import { Layers, Search, Download, Target, Save, Trash2, FolderOpen, Loader2, Map, Globe, Zap, TreeDeciduous, Building2 } from "lucide-react";
 import { analyzeRadius, type AnalysisResults } from "@/lib/radiusAnalysis";
 import { exportAsGeoJSON, exportAsCSV } from "@/lib/mapExport";
 import { trpc } from "@/lib/trpc";
 import { Textarea } from "@/components/ui/textarea";
 import { useProxyMapLoader } from "@/hooks/useProxyMapLoader";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
+import { Link } from "wouter";
 
 // Australia center
 const defaultCenter = {
@@ -115,6 +117,12 @@ export default function FeedstockMap() {
       mapTypeControl: true,
       streetViewControl: false,
       fullscreenControl: true,
+      styles: [
+        { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
+        { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
+        { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9eafc" }] },
+        { featureType: "landscape.natural", elementType: "geometry", stylers: [{ color: "#e8f5e9" }] },
+      ],
     });
 
     mapRef.current = map;
@@ -149,51 +157,58 @@ export default function FeedstockMap() {
 
   // Create popup content
   const createPopupContent = (layerId: string, properties: Record<string, any>): string => {
+    const baseStyle = `font-family: system-ui, -apple-system, sans-serif; font-size: 13px;`;
     switch (layerId) {
       case "sugar-mills":
         return `
-          <div style="padding: 8px; max-width: 250px;">
-            <h3 style="margin: 0 0 8px; font-weight: bold;">${properties.name || "Sugar Mill"}</h3>
-            <p style="margin: 4px 0;"><strong>Owner:</strong> ${properties.owner || "N/A"}</p>
-            <p style="margin: 4px 0;"><strong>Capacity:</strong> ${(properties.crushing_capacity_tonnes || 0).toLocaleString()} tonnes</p>
-            <p style="margin: 4px 0;"><strong>State:</strong> ${properties.state || "N/A"}</p>
-            <p style="margin: 4px 0;"><strong>Bagasse Available:</strong> ${(properties.bagasse_tonnes_available || 0).toLocaleString()} tonnes</p>
+          <div style="${baseStyle} padding: 12px; max-width: 280px;">
+            <h3 style="margin: 0 0 8px; font-weight: 600; font-size: 15px; color: #1a1a1a;">${properties.name || "Sugar Mill"}</h3>
+            <div style="display: grid; gap: 6px;">
+              <div style="display: flex; justify-content: space-between;"><span style="color: #666;">Owner:</span><span style="font-weight: 500;">${properties.owner || "N/A"}</span></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: #666;">Capacity:</span><span style="font-weight: 500;">${(properties.crushing_capacity_tonnes || 0).toLocaleString()} t</span></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: #666;">Bagasse:</span><span style="font-weight: 500; color: #059669;">${(properties.bagasse_tonnes_available || 0).toLocaleString()} t</span></div>
+            </div>
           </div>
         `;
       case "biogas-facilities":
         return `
-          <div style="padding: 8px; max-width: 250px;">
-            <h3 style="margin: 0 0 8px; font-weight: bold;">${properties.name || "Biogas Facility"}</h3>
-            <p style="margin: 4px 0;"><strong>Capacity:</strong> ${properties.capacity_mw || "N/A"} MW</p>
-            <p style="margin: 4px 0;"><strong>Feedstock:</strong> ${properties.feedstock_type || "N/A"}</p>
-            <p style="margin: 4px 0;"><strong>State:</strong> ${properties.state || "N/A"}</p>
+          <div style="${baseStyle} padding: 12px; max-width: 280px;">
+            <h3 style="margin: 0 0 8px; font-weight: 600; font-size: 15px; color: #1a1a1a;">${properties.name || "Biogas Facility"}</h3>
+            <div style="display: grid; gap: 6px;">
+              <div style="display: flex; justify-content: space-between;"><span style="color: #666;">Capacity:</span><span style="font-weight: 500;">${properties.capacity_mw || "N/A"} MW</span></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: #666;">Feedstock:</span><span style="font-weight: 500;">${properties.feedstock_type || "N/A"}</span></div>
+            </div>
           </div>
         `;
       case "biofuel-plants":
         return `
-          <div style="padding: 8px; max-width: 250px;">
-            <h3 style="margin: 0 0 8px; font-weight: bold;">${properties.name || "Biofuel Plant"}</h3>
-            <p style="margin: 4px 0;"><strong>Type:</strong> ${properties.fuel_type || "N/A"}</p>
-            <p style="margin: 4px 0;"><strong>Capacity:</strong> ${properties.capacity_ml_year || "N/A"} ML/year</p>
-            <p style="margin: 4px 0;"><strong>State:</strong> ${properties.state || "N/A"}</p>
+          <div style="${baseStyle} padding: 12px; max-width: 280px;">
+            <h3 style="margin: 0 0 8px; font-weight: 600; font-size: 15px; color: #1a1a1a;">${properties.name || "Biofuel Plant"}</h3>
+            <div style="display: grid; gap: 6px;">
+              <div style="display: flex; justify-content: space-between;"><span style="color: #666;">Type:</span><span style="font-weight: 500;">${properties.fuel_type || "N/A"}</span></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: #666;">Capacity:</span><span style="font-weight: 500;">${properties.capacity_ml_year || "N/A"} ML/yr</span></div>
+            </div>
           </div>
         `;
       case "transport-ports":
         return `
-          <div style="padding: 8px; max-width: 250px;">
-            <h3 style="margin: 0 0 8px; font-weight: bold;">${properties.name || "Port"}</h3>
-            <p style="margin: 4px 0;"><strong>Type:</strong> ${properties.type || "N/A"}</p>
-            <p style="margin: 4px 0;"><strong>Throughput:</strong> ${properties.throughput_mt || "N/A"} MT/year</p>
-            <p style="margin: 4px 0;"><strong>State:</strong> ${properties.state || "N/A"}</p>
+          <div style="${baseStyle} padding: 12px; max-width: 280px;">
+            <h3 style="margin: 0 0 8px; font-weight: 600; font-size: 15px; color: #1a1a1a;">${properties.name || "Port"}</h3>
+            <div style="display: grid; gap: 6px;">
+              <div style="display: flex; justify-content: space-between;"><span style="color: #666;">Type:</span><span style="font-weight: 500;">${properties.type || "N/A"}</span></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: #666;">Throughput:</span><span style="font-weight: 500;">${properties.throughput_mt || "N/A"} MT/yr</span></div>
+            </div>
           </div>
         `;
       case "grain-regions":
       case "forestry-regions":
         return `
-          <div style="padding: 8px; max-width: 250px;">
-            <h3 style="margin: 0 0 8px; font-weight: bold;">${properties.name || properties.REGION_NAME || "Region"}</h3>
-            <p style="margin: 4px 0;"><strong>State:</strong> ${properties.state || properties.STATE || "N/A"}</p>
-            <p style="margin: 4px 0;"><strong>Area:</strong> ${(properties.area_ha || properties.AREA_HA || 0).toLocaleString()} ha</p>
+          <div style="${baseStyle} padding: 12px; max-width: 280px;">
+            <h3 style="margin: 0 0 8px; font-weight: 600; font-size: 15px; color: #1a1a1a;">${properties.name || properties.REGION_NAME || "Region"}</h3>
+            <div style="display: grid; gap: 6px;">
+              <div style="display: flex; justify-content: space-between;"><span style="color: #666;">State:</span><span style="font-weight: 500;">${properties.state || properties.STATE || "N/A"}</span></div>
+              <div style="display: flex; justify-content: space-between;"><span style="color: #666;">Area:</span><span style="font-weight: 500;">${(properties.area_ha || properties.AREA_HA || 0).toLocaleString()} ha</span></div>
+            </div>
           </div>
         `;
       default:
@@ -345,11 +360,11 @@ export default function FeedstockMap() {
 
     // Create new circle
     const circle = new google.maps.Circle({
-      strokeColor: "#FF0000",
-      strokeOpacity: 0.8,
-      strokeWeight: 2,
-      fillColor: "#FF0000",
-      fillOpacity: 0.1,
+      strokeColor: "#14b8a6",
+      strokeOpacity: 0.9,
+      strokeWeight: 3,
+      fillColor: "#14b8a6",
+      fillOpacity: 0.15,
       map: mapRef.current,
       center: centerPos,
       radius: radiusKm * 1000,
@@ -507,11 +522,11 @@ export default function FeedstockMap() {
       setTimeout(() => {
         if (mapRef.current) {
           const circle = new google.maps.Circle({
-            strokeColor: "#3b82f6",
-            strokeOpacity: 0.8,
-            strokeWeight: 2,
-            fillColor: "#3b82f6",
-            fillOpacity: 0.1,
+            strokeColor: "#14b8a6",
+            strokeOpacity: 0.9,
+            strokeWeight: 3,
+            fillColor: "#14b8a6",
+            fillOpacity: 0.15,
             map: mapRef.current,
             center: { lat: centerLat, lng: centerLng },
             radius: analysis.radiusKm * 1000,
@@ -524,361 +539,295 @@ export default function FeedstockMap() {
 
   if (loadError) {
     return (
-      <div className="container py-8">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-destructive">Failed to load Google Maps. Please check your API key.</p>
-          </CardContent>
-        </Card>
-      </div>
+      <PageLayout>
+        <PageContainer>
+          <Card>
+            <CardContent className="py-16 text-center">
+              <Map className="h-12 w-12 text-destructive mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Failed to Load Map</h3>
+              <p className="text-muted-foreground">Please check your API key configuration and try again.</p>
+            </CardContent>
+          </Card>
+        </PageContainer>
+      </PageLayout>
     );
   }
 
   if (!isLoaded) {
     return (
-      <div className="container py-8">
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p>Loading map...</p>
-          </CardContent>
-        </Card>
-      </div>
+      <PageLayout>
+        <PageContainer>
+          <Card>
+            <CardContent className="py-16 text-center">
+              <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
+              <h3 className="text-lg font-semibold mb-2">Loading Map</h3>
+              <p className="text-muted-foreground">Initializing geospatial visualization...</p>
+            </CardContent>
+          </Card>
+        </PageContainer>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="container py-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Australian Bioenergy Feedstock Map</h1>
-        <p className="text-muted-foreground">
-          Interactive GIS visualization of feedstock resources, facilities, and infrastructure
-        </p>
-      </div>
+    <PageLayout showFooter={false}>
+      {/* Compact Header */}
+      <section className="bg-gradient-to-r from-slate-900 to-teal-900 text-white py-8">
+        <PageContainer padding="none">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="outline" className="border-teal-400/50 text-teal-300 bg-teal-500/10">
+                  <Globe className="h-3 w-3 mr-1" />
+                  Interactive GIS
+                </Badge>
+              </div>
+              <h1 className="text-2xl lg:text-3xl font-display font-bold">
+                Feedstock Supply Map
+              </h1>
+              <p className="text-slate-300 text-sm mt-1">
+                Visualize biomass resources, facilities, and infrastructure across Australia
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="border-white/20 text-white hover:bg-white/10" asChild>
+                <Link href="/futures">
+                  <TreeDeciduous className="h-4 w-4 mr-1" />
+                  Marketplace
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" className="border-white/20 text-white hover:bg-white/10" asChild>
+                <Link href="/bankability">
+                  <Building2 className="h-4 w-4 mr-1" />
+                  Bankability
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </PageContainer>
+      </section>
 
-      <div className="grid md:grid-cols-4 gap-6">
-        {/* Map Container */}
-        <div className="md:col-span-3">
-          <Card>
-            <CardContent className="p-0">
-              <div
-                ref={mapContainerRef}
-                style={{ width: "100%", height: "600px" }}
-              />
-            </CardContent>
-          </Card>
+      <div className="flex-1 flex">
+        <div className="flex-1 flex flex-col lg:flex-row">
+          {/* Map Container */}
+          <div className="flex-1 flex flex-col">
+            <div
+              ref={mapContainerRef}
+              className="flex-1 min-h-[500px] lg:min-h-0"
+            />
 
-          {/* Radius Slider */}
-          <Card className="mt-4">
-            <CardContent className="pt-6">
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-sm font-medium">Analysis Radius</label>
-                  <Badge variant="outline">{radiusKm} km</Badge>
-                </div>
+            {/* Map Controls Bar */}
+            <div className="bg-background border-t p-3 flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">Radius:</span>
                 <Slider
                   value={[radiusKm]}
                   onValueChange={(value) => setRadiusKm(value[0])}
                   min={10}
                   max={200}
                   step={5}
-                  className="w-full"
+                  className="flex-1"
                 />
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>10 km</span>
-                  <span>200 km</span>
-                </div>
+                <Badge variant="outline" className="shrink-0">{radiusKm} km</Badge>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Map Controls */}
-          <div className="mt-4 flex gap-2">
-            <Button onClick={drawRadius} variant="outline" disabled={isAnalyzing}>
-              <Target className="h-4 w-4 mr-2" />
-              {isAnalyzing ? "Analyzing..." : `Draw ${radiusKm}km Radius`}
-            </Button>
-            {radiusCenter && (
-              <Button onClick={clearRadius} variant="outline">
-                Clear Radius
-              </Button>
-            )}
+              <div className="flex gap-2">
+                <Button onClick={drawRadius} size="sm" disabled={isAnalyzing}>
+                  <Target className="h-4 w-4 mr-1" />
+                  {isAnalyzing ? "Analyzing..." : "Analyze Area"}
+                </Button>
+                {radiusCenter && (
+                  <Button onClick={clearRadius} variant="outline" size="sm">
+                    Clear
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Analysis Results */}
-          {analysisResults && (
-            <Card className="mt-4">
-              <CardHeader>
-                <CardTitle>{radiusKm}km Radius Analysis</CardTitle>
-                <CardDescription>Supply chain feasibility assessment for selected area</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Feasibility Score */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium">Feasibility Score</span>
-                    <Badge
-                      variant={
-                        analysisResults.feasibilityScore >= 70
-                          ? "default"
-                          : analysisResults.feasibilityScore >= 40
-                          ? "secondary"
-                          : "destructive"
-                      }
-                    >
-                      {analysisResults.feasibilityScore}/100
-                    </Badge>
-                  </div>
-                  <div className="w-full bg-secondary rounded-full h-2">
-                    <div
-                      className="bg-primary h-2 rounded-full transition-all"
-                      style={{ width: `${analysisResults.feasibilityScore}%` }}
-                    />
-                  </div>
-                </div>
+          {/* Sidebar */}
+          <div className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l bg-background overflow-y-auto max-h-[50vh] lg:max-h-none">
+            <div className="p-4 space-y-4">
+              {/* Analysis Results */}
+              {analysisResults && (
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-primary" />
+                      Analysis Results
+                    </CardTitle>
+                    <CardDescription>{radiusKm}km radius from center</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Feasibility Score */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium">Feasibility</span>
+                        <Badge variant={analysisResults.feasibilityScore >= 70 ? "default" : analysisResults.feasibilityScore >= 40 ? "secondary" : "destructive"}>
+                          {analysisResults.feasibilityScore}/100
+                        </Badge>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${analysisResults.feasibilityScore}%` }} />
+                      </div>
+                    </div>
 
-                {/* Facilities Count */}
-                <div>
-                  <h4 className="text-sm font-medium mb-3">Facilities Within Radius</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Sugar Mills:</span>
-                      <span className="font-medium">{analysisResults.facilities.sugarMills}</span>
+                    {/* Facilities */}
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Facilities Found</h4>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="flex justify-between"><span className="text-muted-foreground">Sugar Mills:</span><span className="font-mono">{analysisResults.facilities.sugarMills}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Biogas:</span><span className="font-mono">{analysisResults.facilities.biogasFacilities}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Biofuel:</span><span className="font-mono">{analysisResults.facilities.biofuelPlants}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Ports:</span><span className="font-mono">{analysisResults.facilities.ports}</span></div>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Biogas:</span>
-                      <span className="font-medium">{analysisResults.facilities.biogasFacilities}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Biofuel Plants:</span>
-                      <span className="font-medium">{analysisResults.facilities.biofuelPlants}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Ports:</span>
-                      <span className="font-medium">{analysisResults.facilities.ports}</span>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Feedstock Tonnes */}
-                <div>
-                  <h4 className="text-sm font-medium mb-3">Estimated Annual Feedstock (tonnes)</h4>
+                    {/* Feedstock */}
+                    <div className="space-y-2 pt-2 border-t">
+                      <h4 className="text-sm font-medium">Annual Feedstock (t)</h4>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between"><span className="text-muted-foreground">Bagasse:</span><span className="font-mono">{analysisResults.feedstockTonnes.bagasse.toLocaleString()}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Grain Stubble:</span><span className="font-mono">{analysisResults.feedstockTonnes.grainStubble.toLocaleString()}</span></div>
+                        <div className="flex justify-between font-semibold pt-1 border-t"><span>Total:</span><span className="font-mono text-primary">{analysisResults.feedstockTonnes.total.toLocaleString()}</span></div>
+                      </div>
+                    </div>
+
+                    <Button onClick={() => setShowSaveDialog(true)} className="w-full" variant="outline" size="sm">
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Analysis
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Filters */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Search className="h-4 w-4" />
+                    Filters
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* State Filter */}
                   <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Bagasse:</span>
-                      <span className="font-medium">{analysisResults.feedstockTonnes.bagasse.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Grain Stubble:</span>
-                      <span className="font-medium">{analysisResults.feedstockTonnes.grainStubble.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-sm font-bold pt-2 border-t">
-                      <span>Total:</span>
-                      <span>{analysisResults.feedstockTonnes.total.toLocaleString()}</span>
+                    <Label className="text-sm">States</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {["QLD", "NSW", "VIC", "SA", "WA", "TAS"].map((state) => (
+                        <div key={state} className="flex items-center gap-1.5">
+                          <Checkbox
+                            id={`state-${state}`}
+                            checked={selectedStates.includes(state)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedStates([...selectedStates, state]);
+                              } else {
+                                setSelectedStates(selectedStates.filter((s) => s !== state));
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`state-${state}`} className="text-xs cursor-pointer">{state}</Label>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                </div>
 
-                {/* Action Buttons */}
-                <div className="pt-4 border-t space-y-2">
-                  <Button onClick={() => setShowSaveDialog(true)} className="w-full" variant="outline">
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Analysis
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setSelectedStates(["QLD", "NSW", "VIC", "SA", "WA", "TAS"])}
+                  >
+                    Reset Filters
                   </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+                </CardContent>
+              </Card>
 
-        {/* Sidebar Controls */}
-        <div className="space-y-4">
-          {/* Search */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Search className="h-5 w-5" />
-                Search
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Input
-                placeholder="Search facilities or regions..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Filters */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Filters</CardTitle>
-              <CardDescription>Refine by location and capacity</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* State Filter */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">States</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {["QLD", "NSW", "VIC", "SA", "WA", "TAS"].map((state) => (
-                    <div key={state} className="flex items-center gap-2">
-                      <Checkbox
-                        checked={selectedStates.includes(state)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedStates([...selectedStates, state]);
-                          } else {
-                            setSelectedStates(selectedStates.filter((s) => s !== state));
-                          }
-                        }}
-                      />
-                      <Label className="text-xs">{state}</Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Reset Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => {
-                  setSelectedStates(["QLD", "NSW", "VIC", "SA", "WA", "TAS"]);
-                  setSugarMillCapacity([0, 4000000]);
-                  setBiogasCapacity([0, 50]);
-                  setBiofuelCapacity([0, 500]);
-                  setPortThroughput([0, 200]);
-                }}
-              >
-                Reset Filters
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Saved Analyses */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <FolderOpen className="h-5 w-5" />
-                Saved Analyses
-              </CardTitle>
-              <CardDescription>{savedAnalyses?.length || 0} saved</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {savedAnalyses && savedAnalyses.length > 0 ? (
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {savedAnalyses.map((analysis: any) => (
-                    <div key={analysis.id} className="border rounded-lg p-3 hover:bg-accent/50 transition-colors">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm truncate">{analysis.name}</div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {analysis.radiusKm}km radius
+              {/* Saved Analyses */}
+              {savedAnalyses && savedAnalyses.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <FolderOpen className="h-4 w-4" />
+                      Saved Analyses
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {savedAnalyses.map((analysis: any) => (
+                        <div key={analysis.id} className="flex items-center justify-between p-2 rounded-lg border hover:bg-accent/50 transition-colors">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">{analysis.name}</div>
+                            <div className="text-xs text-muted-foreground">{analysis.radiusKm}km</div>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleLoadAnalysis(analysis)}>
+                              <Target className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => deleteAnalysisMutation.mutate({ id: analysis.id })}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleLoadAnalysis(analysis)}>
-                            <Target className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 text-destructive"
-                            onClick={() => deleteAnalysisMutation.mutate({ id: analysis.id })}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Layers */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Layers className="h-4 w-4" />
+                    Layers
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {layers.map((layer) => (
+                    <div key={layer.id} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Checkbox checked={layer.visible} onCheckedChange={() => toggleLayer(layer.id)} />
+                          <Label className="text-sm cursor-pointer">{layer.name}</Label>
                         </div>
+                        <div className="w-3 h-3 rounded-full border" style={{ backgroundColor: layer.color }} />
                       </div>
+                      {layer.visible && (
+                        <div className="ml-6 space-y-1">
+                          <Slider
+                            value={[layerOpacity[layer.id]]}
+                            onValueChange={([value]) => updateOpacity(layer.id, value)}
+                            max={100}
+                            step={10}
+                            className="w-full"
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 text-sm text-muted-foreground">
-                  No saved analyses yet.
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
 
-          {/* Layer Controls */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Layers className="h-5 w-5" />
-                Layers
-              </CardTitle>
-              <CardDescription>Toggle visibility and adjust opacity</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {layers.map((layer) => (
-                <div key={layer.id} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Checkbox checked={layer.visible} onCheckedChange={() => toggleLayer(layer.id)} />
-                      <Label className="text-sm font-medium">{layer.name}</Label>
-                    </div>
-                    <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: layer.color }} />
-                  </div>
-                  {layer.visible && (
-                    <div className="ml-6 space-y-1">
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Opacity</span>
-                        <span>{layerOpacity[layer.id]}%</span>
-                      </div>
-                      <Slider
-                        value={[layerOpacity[layer.id]]}
-                        onValueChange={([value]) => updateOpacity(layer.id, value)}
-                        max={100}
-                        step={10}
-                        className="w-full"
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Export Data */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Download className="h-5 w-5" />
-                Export Data
-              </CardTitle>
-              <CardDescription>Download filtered facilities</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button onClick={handleExportGeoJSON} disabled={isExporting} variant="outline" className="w-full justify-start">
-                <Download className="h-4 w-4 mr-2" />
-                {isExporting ? "Exporting..." : "Export as GeoJSON"}
-              </Button>
-              <Button onClick={handleExportCSV} disabled={isExporting} variant="outline" className="w-full justify-start">
-                <Download className="h-4 w-4 mr-2" />
-                {isExporting ? "Exporting..." : "Export as CSV"}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Legend */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Legend</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: "#8B4513" }} />
-                <span className="text-sm">Sugar Mills</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4" style={{ backgroundColor: "#DAA520", opacity: 0.3 }} />
-                <span className="text-sm">Grain Regions</span>
-              </div>
-            </CardContent>
-          </Card>
+              {/* Export */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Download className="h-4 w-4" />
+                    Export
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Button onClick={handleExportGeoJSON} disabled={isExporting} variant="outline" size="sm" className="w-full">
+                    {isExporting ? "Exporting..." : "Export GeoJSON"}
+                  </Button>
+                  <Button onClick={handleExportCSV} disabled={isExporting} variant="outline" size="sm" className="w-full">
+                    {isExporting ? "Exporting..." : "Export CSV"}
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -886,27 +835,26 @@ export default function FeedstockMap() {
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Save Radius Analysis</DialogTitle>
-            <DialogDescription>Save this analysis to your account for future reference.</DialogDescription>
+            <DialogTitle>Save Analysis</DialogTitle>
+            <DialogDescription>Save this analysis for future reference.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div>
-              <Label htmlFor="analysis-name">Analysis Name *</Label>
+              <Label htmlFor="analysis-name">Name *</Label>
               <Input
                 id="analysis-name"
-                placeholder="e.g., Brisbane North Site Assessment"
+                placeholder="e.g., Brisbane North Assessment"
                 value={savedAnalysisName}
                 onChange={(e) => setSavedAnalysisName(e.target.value)}
                 className="mt-1"
               />
             </div>
-
             <div>
-              <Label htmlFor="analysis-description">Description (Optional)</Label>
+              <Label htmlFor="analysis-description">Description</Label>
               <Textarea
                 id="analysis-description"
-                placeholder="Add notes about this analysis..."
+                placeholder="Add notes..."
                 value={savedAnalysisDescription}
                 onChange={(e) => setSavedAnalysisDescription(e.target.value)}
                 className="mt-1"
@@ -916,15 +864,13 @@ export default function FeedstockMap() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSaveDialog(false)}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setShowSaveDialog(false)}>Cancel</Button>
             <Button onClick={handleSaveAnalysis} disabled={saveAnalysisMutation.isPending || !savedAnalysisName.trim()}>
-              {saveAnalysisMutation.isPending ? "Saving..." : "Save Analysis"}
+              {saveAnalysisMutation.isPending ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageLayout>
   );
 }

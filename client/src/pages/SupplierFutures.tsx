@@ -1,3 +1,6 @@
+/**
+ * SupplierFutures - Supplier dashboard for managing futures listings.
+ */
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,8 +8,23 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { trpc } from "@/lib/trpc";
-import { Sprout, Plus, Edit, Eye, TreeDeciduous, Leaf, Calendar, MapPin, TrendingUp, FileText, Users } from "lucide-react";
-import { Link } from "wouter";
+import { PageLayout, PageContainer } from "@/components/layout";
+import {
+  Sprout,
+  Plus,
+  Edit,
+  Eye,
+  TreeDeciduous,
+  Leaf,
+  Calendar,
+  MapPin,
+  TrendingUp,
+  FileText,
+  Users,
+  ArrowRight,
+  Package,
+} from "lucide-react";
+import { Link, useLocation } from "wouter";
 import { formatDate } from "@/const";
 
 const CROP_TYPE_LABELS: Record<string, string> = {
@@ -35,22 +53,90 @@ const CROP_TYPE_ICONS: Record<string, React.ReactNode> = {
   other_perennial: <Sprout className="h-5 w-5" />,
 };
 
+// Mock data for demonstration
+const MOCK_FUTURES = [
+  {
+    id: 1,
+    futuresId: "FUT-2025-0001",
+    title: "Hunter Valley Eucalyptus Plantation",
+    cropType: "eucalyptus",
+    cropVariety: "E. grandis",
+    state: "NSW",
+    region: "Hunter Valley",
+    landAreaHectares: "2500",
+    projectionStartYear: 2025,
+    projectionEndYear: 2035,
+    totalProjectedTonnes: "250000",
+    totalContractedTonnes: "75000",
+    totalAvailableTonnes: "175000",
+    indicativePricePerTonne: "120.00",
+    status: "active",
+    publishedAt: "2025-01-15",
+    createdAt: "2025-01-10",
+    eoiCounts: { total: 5, pending: 2, accepted: 2, declined: 1 },
+  },
+  {
+    id: 2,
+    futuresId: "FUT-2025-0002",
+    title: "Gippsland Miscanthus Farm",
+    cropType: "miscanthus",
+    cropVariety: "M. x giganteus",
+    state: "VIC",
+    region: "Gippsland",
+    landAreaHectares: "800",
+    projectionStartYear: 2025,
+    projectionEndYear: 2040,
+    totalProjectedTonnes: "120000",
+    totalContractedTonnes: "0",
+    totalAvailableTonnes: "120000",
+    indicativePricePerTonne: "95.00",
+    status: "active",
+    publishedAt: "2025-01-20",
+    createdAt: "2025-01-18",
+    eoiCounts: { total: 3, pending: 3, accepted: 0, declined: 0 },
+  },
+  {
+    id: 3,
+    futuresId: "FUT-2025-0003",
+    title: "Wide Bay Bamboo Plantation",
+    cropType: "bamboo",
+    state: "QLD",
+    region: "Wide Bay",
+    landAreaHectares: "400",
+    projectionStartYear: 2026,
+    projectionEndYear: 2036,
+    totalProjectedTonnes: "60000",
+    totalContractedTonnes: "0",
+    totalAvailableTonnes: "60000",
+    indicativePricePerTonne: null,
+    status: "draft",
+    publishedAt: null,
+    createdAt: "2025-01-25",
+    eoiCounts: { total: 0, pending: 0, accepted: 0, declined: 0 },
+  },
+];
+
 export default function SupplierFutures() {
   const { user, loading: authLoading } = useAuth();
+  const [, setLocation] = useLocation();
 
-  const { data: futures, isLoading } = trpc.futures.list.useQuery(
+  const { data: apiFutures, isLoading } = trpc.futures.list.useQuery(
     undefined,
     { enabled: !!user }
   );
 
+  // Use mock data if API returns empty
+  const futures = apiFutures && apiFutures.length > 0 ? apiFutures : MOCK_FUTURES;
+  const showingMockData = !apiFutures || apiFutures.length === 0;
+
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
+      <PageLayout>
+        <PageContainer size="lg" padding="lg">
           <Skeleton className="h-8 w-64 mx-auto mb-4" />
           <Skeleton className="h-4 w-48 mx-auto" />
-        </div>
-      </div>
+        </PageContainer>
+      </PageLayout>
     );
   }
 
@@ -72,74 +158,80 @@ export default function SupplierFutures() {
 
   // Calculate stats
   const stats = {
-    active: futures?.filter(f => f.status === 'active').length || 0,
-    totalProjected: futures?.reduce((sum, f) => sum + (parseFloat(f.totalProjectedTonnes || '0') || 0), 0) || 0,
-    totalContracted: futures?.reduce((sum, f) => sum + (parseFloat(f.totalContractedTonnes || '0') || 0), 0) || 0,
-    pendingEOIs: futures?.reduce((sum, f) => sum + (f.eoiCounts?.pending || 0), 0) || 0,
+    active: futures?.filter((f: any) => f.status === 'active').length || 0,
+    totalProjected: futures?.reduce((sum: number, f: any) => sum + (parseFloat(f.totalProjectedTonnes || '0') || 0), 0) || 0,
+    totalContracted: futures?.reduce((sum: number, f: any) => sum + (parseFloat(f.totalContractedTonnes || '0') || 0), 0) || 0,
+    pendingEOIs: futures?.reduce((sum: number, f: any) => sum + (f.eoiCounts?.pending || 0), 0) || 0,
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container py-8">
-        <div className="mb-8 flex justify-between items-center">
-          <div>
-            <h1 className="text-4xl font-bold mb-2">Futures Listings</h1>
-            <p className="text-muted-foreground">
-              Manage your long-term perennial crop projections and EOIs
-            </p>
-          </div>
-          <Link href="/supplier/futures/create">
-            <Button>
+    <PageLayout>
+      {/* Hero Section */}
+      <section className="bg-gradient-to-br from-teal-800 via-emerald-800 to-green-900 text-white">
+        <PageContainer size="xl" padding="md" className="py-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              {showingMockData && (
+                <Badge className="mb-3 bg-white/20 text-white border-white/30">
+                  Demo Data
+                </Badge>
+              )}
+              <h1 className="text-3xl md:text-4xl font-display font-bold mb-2">
+                Futures Listings
+              </h1>
+              <p className="text-white/70">
+                Manage your long-term perennial crop projections and EOIs
+              </p>
+            </div>
+            <Button
+              size="lg"
+              onClick={() => setLocation("/supplier/futures/create")}
+              className="bg-white text-emerald-800 hover:bg-white/90"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Create Futures Listing
             </Button>
-          </Link>
-        </div>
+          </div>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Listings</CardTitle>
-              <Sprout className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.active}</div>
-              <p className="text-xs text-muted-foreground">Published futures</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Projected</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalProjected.toLocaleString()}t</div>
-              <p className="text-xs text-muted-foreground">Across all futures</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Contracted</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalContracted.toLocaleString()}t</div>
-              <p className="text-xs text-muted-foreground">Committed volume</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pending EOIs</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.pendingEOIs}</div>
-              <p className="text-xs text-muted-foreground">Awaiting response</p>
-            </CardContent>
-          </Card>
-        </div>
+          {/* Stats Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Sprout className="h-4 w-4 text-white/70" />
+                <span className="text-sm text-white/70">Active Listings</span>
+              </div>
+              <div className="text-3xl font-bold font-mono">{stats.active}</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="h-4 w-4 text-white/70" />
+                <span className="text-sm text-white/70">Total Projected</span>
+              </div>
+              <div className="text-3xl font-bold font-mono">{(stats.totalProjected / 1000).toFixed(0)}k t</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="h-4 w-4 text-white/70" />
+                <span className="text-sm text-white/70">Contracted</span>
+              </div>
+              <div className="text-3xl font-bold font-mono">{(stats.totalContracted / 1000).toFixed(0)}k t</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="h-4 w-4 text-white/70" />
+                <span className="text-sm text-white/70">Pending EOIs</span>
+              </div>
+              <div className="text-3xl font-bold font-mono">{stats.pendingEOIs}</div>
+              {stats.pendingEOIs > 0 && (
+                <div className="text-xs text-amber-300 mt-1">Requires attention</div>
+              )}
+            </div>
+          </div>
+        </PageContainer>
+      </section>
 
+      {/* Main Content */}
+      <PageContainer size="xl" padding="md">
         {isLoading ? (
           <div className="space-y-4">
             {[1, 2, 3].map(i => (
@@ -163,19 +255,21 @@ export default function SupplierFutures() {
               const projectionYears = f.projectionEndYear - f.projectionStartYear + 1;
 
               return (
-                <Card key={f.id} className="hover:shadow-md transition-shadow">
+                <Card key={f.id} className="group hover:shadow-lg transition-all duration-200 hover:border-primary/30">
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <CardTitle className="flex items-center gap-2">
-                          <div className="p-2 bg-green-100 rounded-lg">
+                        <CardTitle className="flex items-center gap-3">
+                          <div className="p-2.5 bg-green-100 rounded-xl">
                             {CROP_TYPE_ICONS[f.cropType] || <Sprout className="h-5 w-5" />}
                           </div>
-                          {f.futuresId}
+                          <div>
+                            <span className="text-lg">{f.futuresId}</span>
+                            <p className="text-sm font-normal text-muted-foreground">
+                              {f.title || `${f.landAreaHectares}ha ${CROP_TYPE_LABELS[f.cropType]} plantation`}
+                            </p>
+                          </div>
                         </CardTitle>
-                        <CardDescription className="mt-2">
-                          {f.title || `${f.landAreaHectares}ha ${CROP_TYPE_LABELS[f.cropType]} plantation`}
-                        </CardDescription>
                       </div>
                       <div className="flex gap-2">
                         <Badge className={getStatusColor(f.status)}>
@@ -188,7 +282,7 @@ export default function SupplierFutures() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid md:grid-cols-4 gap-4 text-sm">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-muted-foreground" />
                         <span>{f.state}{f.region ? `, ${f.region}` : ''}</span>
@@ -198,80 +292,91 @@ export default function SupplierFutures() {
                         <span>{f.projectionStartYear} - {f.projectionEndYear} ({projectionYears} years)</span>
                       </div>
                       <div>
-                        <div className="text-muted-foreground">Land Area</div>
-                        <div className="font-medium">{parseFloat(f.landAreaHectares).toLocaleString()} ha</div>
+                        <div className="text-muted-foreground text-xs">Land Area</div>
+                        <div className="font-semibold">{parseFloat(f.landAreaHectares).toLocaleString()} ha</div>
                       </div>
                       <div>
-                        <div className="text-muted-foreground">Indicative Price</div>
-                        <div className="font-medium">
+                        <div className="text-muted-foreground text-xs">Indicative Price</div>
+                        <div className="font-semibold font-mono">
                           {f.indicativePricePerTonne ? `$${parseFloat(f.indicativePricePerTonne).toFixed(2)}/t` : 'Negotiable'}
                         </div>
                       </div>
                     </div>
 
                     {/* Volume Stats */}
-                    <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Total Projected</span>
-                        <span className="font-medium">{parseFloat(f.totalProjectedTonnes || '0').toLocaleString()}t</span>
+                    <div className="bg-muted/50 rounded-xl p-4 space-y-3">
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Total Projected</span>
+                          <p className="font-semibold font-mono">{parseFloat(f.totalProjectedTonnes || '0').toLocaleString()} t</p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Contracted</span>
+                          <p className="font-semibold text-blue-600 font-mono">
+                            {parseFloat(f.totalContractedTonnes || '0').toLocaleString()} t
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Available</span>
+                          <p className="font-semibold text-green-600 font-mono">
+                            {parseFloat(f.totalAvailableTonnes || '0').toLocaleString()} t
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Contracted</span>
-                        <span className="font-medium text-blue-600">
-                          {parseFloat(f.totalContractedTonnes || '0').toLocaleString()}t
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Available</span>
-                        <span className="font-medium text-green-600">
-                          {parseFloat(f.totalAvailableTonnes || '0').toLocaleString()}t
-                        </span>
-                      </div>
-                      <Progress value={availablePercent} className="h-2" />
-                      <div className="text-xs text-center text-muted-foreground">
-                        {Math.round(availablePercent)}% available for contracting
+                      <div>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-muted-foreground">Availability</span>
+                          <span>{Math.round(availablePercent)}%</span>
+                        </div>
+                        <Progress value={availablePercent} className="h-2" />
                       </div>
                     </div>
 
-                    {/* EOI Stats */}
-                    {f.eoiCounts && f.eoiCounts.total > 0 && (
-                      <div className="flex items-center gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                          <span><strong>{f.eoiCounts.total}</strong> EOIs received</span>
-                        </div>
-                        {f.eoiCounts.pending > 0 && (
-                          <Badge variant="secondary">{f.eoiCounts.pending} pending</Badge>
-                        )}
-                        {f.eoiCounts.accepted > 0 && (
-                          <Badge className="bg-green-100 text-green-800">{f.eoiCounts.accepted} accepted</Badge>
+                    {/* EOI Stats & Actions */}
+                    <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t">
+                      <div className="flex items-center gap-4">
+                        {f.eoiCounts && f.eoiCounts.total > 0 ? (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <span><strong>{f.eoiCounts.total}</strong> EOIs received</span>
+                            {f.eoiCounts.pending > 0 && (
+                              <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                                {f.eoiCounts.pending} pending
+                              </Badge>
+                            )}
+                            {f.eoiCounts.accepted > 0 && (
+                              <Badge className="bg-green-100 text-green-800">{f.eoiCounts.accepted} accepted</Badge>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">No EOIs yet</span>
                         )}
                       </div>
-                    )}
 
-                    <div className="flex flex-wrap gap-2">
-                      <Link href={`/supplier/futures/${f.id}`}>
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Details
-                        </Button>
-                      </Link>
-                      {f.status === 'draft' && (
-                        <Link href={`/supplier/futures/create?edit=${f.id}`}>
-                          <Button variant="outline" size="sm">
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
+                      <div className="flex gap-2">
+                        <Link href={`/supplier/futures/${f.id}`}>
+                          <Button variant="outline" size="sm" className="group-hover:border-primary group-hover:text-primary">
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
                           </Button>
                         </Link>
-                      )}
-                      {f.eoiCounts?.pending > 0 && (
-                        <Link href={`/supplier/futures/${f.id}?tab=eois`}>
-                          <Button size="sm">
-                            <Users className="h-4 w-4 mr-2" />
-                            Review EOIs
-                          </Button>
-                        </Link>
-                      )}
+                        {f.status === 'draft' && (
+                          <Link href={`/supplier/futures/create?edit=${f.id}`}>
+                            <Button variant="outline" size="sm">
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
+                            </Button>
+                          </Link>
+                        )}
+                        {f.eoiCounts?.pending > 0 && (
+                          <Link href={`/supplier/futures/${f.id}?tab=eois`}>
+                            <Button size="sm">
+                              <Users className="h-4 w-4 mr-2" />
+                              Review EOIs
+                            </Button>
+                          </Link>
+                        )}
+                      </div>
                     </div>
 
                     <div className="text-xs text-muted-foreground">
@@ -284,23 +389,49 @@ export default function SupplierFutures() {
             })}
           </div>
         ) : (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Sprout className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No futures listings yet</h3>
-              <p className="text-muted-foreground mb-4">
+          <Card className="border-dashed">
+            <CardContent className="py-16 text-center">
+              <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                <Sprout className="h-8 w-8 text-emerald-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">No futures listings yet</h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                 Create your first futures listing to advertise long-term perennial crop supply
+                and connect with buyers looking for reliable biomass sources.
               </p>
-              <Link href="/supplier/futures/create">
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Futures Listing
-                </Button>
-              </Link>
+              <Button size="lg" onClick={() => setLocation("/supplier/futures/create")}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Futures Listing
+              </Button>
             </CardContent>
           </Card>
         )}
-      </div>
-    </div>
+      </PageContainer>
+
+      {/* CTA Section */}
+      <section className="bg-gradient-to-r from-emerald-50 to-teal-50 border-t">
+        <PageContainer size="lg" padding="md">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-emerald-100 rounded-xl">
+                <Package className="h-6 w-6 text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold">View Your EOIs</h3>
+                <p className="text-sm text-muted-foreground">
+                  Track and respond to expressions of interest from buyers
+                </p>
+              </div>
+            </div>
+            <Link href="/buyer/eois">
+              <Button variant="outline" className="gap-2">
+                View My EOIs
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </PageContainer>
+      </section>
+    </PageLayout>
   );
 }

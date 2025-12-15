@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageLayout } from "@/components/layout";
 import { AUSTRALIAN_STATES } from "@/const";
 import { trpc } from "@/lib/trpc";
 import {
@@ -25,6 +26,7 @@ import {
   Trash2,
   Save,
   Send,
+  Sparkles,
 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { Link, useLocation, useSearch } from "wouter";
@@ -277,64 +279,67 @@ export default function FuturesCreate() {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Skeleton className="h-8 w-64 mx-auto mb-4" />
-          <Skeleton className="h-4 w-48 mx-auto" />
+      <PageLayout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <div className="text-center">
+            <Skeleton className="h-8 w-64 mx-auto mb-4" />
+            <Skeleton className="h-4 w-48 mx-auto" />
+          </div>
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
   if (editId && loadingExisting) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Skeleton className="h-8 w-64 mx-auto mb-4" />
-          <Skeleton className="h-4 w-48 mx-auto" />
+      <PageLayout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <div className="text-center">
+            <Skeleton className="h-8 w-64 mx-auto mb-4" />
+            <Skeleton className="h-4 w-48 mx-auto" />
+          </div>
         </div>
-      </div>
+      </PageLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card/80 backdrop-blur-md sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/">
-            <div className="flex items-center gap-2 cursor-pointer group">
-              <div className="p-1.5 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                <Leaf className="h-6 w-6 text-primary" />
-              </div>
-              <span className="text-xl font-bold text-foreground">ABFI</span>
-            </div>
-          </Link>
+    <PageLayout>
+      {/* Hero Section */}
+      <section className="relative bg-gradient-to-br from-teal-600 via-emerald-600 to-green-700 text-white overflow-hidden">
+        <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-400/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+
+        <div className="container mx-auto px-4 py-12 lg:py-16 relative z-10">
           <Link href="/supplier/futures">
-            <Button variant="ghost" leftIcon={<ArrowLeft className="h-4 w-4" />}>
-              Back to Futures
+            <Button variant="ghost" className="mb-6 text-white/80 hover:text-white hover:bg-white/10">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to My Futures
             </Button>
           </Link>
-        </div>
-      </header>
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Page Header */}
-        <div className="mb-8 text-center">
-          <Badge variant="outline" className="mb-4">
-            <TreeDeciduous className="h-3.5 w-3.5 mr-1.5" />
-            {editId ? "Edit Futures Listing" : "New Futures Listing"}
-          </Badge>
-          <h1 className="heading-1 text-foreground mb-2">
-            {editId ? "Edit Futures Listing" : "Create Futures Listing"}
-          </h1>
-          <p className="text-muted-foreground body-lg max-w-xl mx-auto">
-            Project your long-term perennial crop yields and connect with buyers seeking future supply
-          </p>
-        </div>
+          <div className="max-w-3xl">
+            <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm mb-4">
+              <TreeDeciduous className="h-3.5 w-3.5 mr-1.5" />
+              {editId ? "Edit Listing" : "New Listing"}
+            </Badge>
 
-        {/* Progress Steps */}
-        <div className="mb-10">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">
+              {editId ? "Edit Futures" : "Create Futures"}
+              <span className="block text-emerald-200">Listing</span>
+            </h1>
+
+            <p className="text-lg text-emerald-100 max-w-xl">
+              Project your long-term perennial crop yields and connect with buyers seeking future supply agreements.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Progress Steps */}
+      <section className="bg-background border-b py-6">
+        <div className="container mx-auto px-4 max-w-4xl">
           <div className="flex items-center justify-between">
             {[1, 2, 3, 4, 5, 6].map((step) => {
               const StepIcon = stepIcons[step - 1];
@@ -343,9 +348,9 @@ export default function FuturesCreate() {
                   <button
                     onClick={() => step < currentStep && setCurrentStep(step as Step)}
                     className={cn(
-                      "flex items-center justify-center w-10 h-10 rounded-xl border-2 transition-all",
+                      "flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all",
                       currentStep >= step
-                        ? "bg-primary border-primary text-primary-foreground shadow-md"
+                        ? "bg-teal-600 border-teal-600 text-white shadow-lg shadow-teal-600/25"
                         : "bg-card border-border text-muted-foreground",
                       step < currentStep && "cursor-pointer hover:opacity-80"
                     )}
@@ -354,14 +359,14 @@ export default function FuturesCreate() {
                     {currentStep > step ? (
                       <CheckCircle2 className="h-5 w-5" />
                     ) : (
-                      <StepIcon className="h-4 w-4" />
+                      <StepIcon className="h-5 w-5" />
                     )}
                   </button>
                   {step < 6 && (
                     <div
                       className={cn(
                         "flex-1 h-1 mx-2 rounded-full transition-colors",
-                        currentStep > step ? "bg-primary" : "bg-border"
+                        currentStep > step ? "bg-teal-600" : "bg-border"
                       )}
                     />
                   )}
@@ -374,8 +379,8 @@ export default function FuturesCreate() {
               <span
                 key={label}
                 className={cn(
-                  "text-xs font-medium transition-colors text-center w-14",
-                  currentStep >= i + 1 ? "text-foreground" : "text-muted-foreground"
+                  "text-xs font-medium transition-colors text-center w-16",
+                  currentStep >= i + 1 ? "text-teal-600 font-semibold" : "text-muted-foreground"
                 )}
               >
                 {label}
@@ -383,610 +388,640 @@ export default function FuturesCreate() {
             ))}
           </div>
         </div>
+      </section>
 
-        {/* Step 1: Crop Details */}
-        {currentStep === 1 && (
-          <Card variant="elevated">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Leaf className="h-5 w-5 text-primary" />
+      {/* Form Content */}
+      <section className="py-12">
+        <div className="container mx-auto px-4 max-w-4xl">
+          {/* Step 1: Crop Details */}
+          {currentStep === 1 && (
+            <Card className="border-t-4 border-t-teal-500">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-teal-100">
+                    <Leaf className="h-6 w-6 text-teal-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-2xl">Crop Details</CardTitle>
+                    <CardDescription>Select the perennial crop type and provide details</CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle>Crop Details</CardTitle>
-                  <CardDescription>Select the perennial crop type and provide details</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="cropType" className="text-base font-semibold">Crop Type *</Label>
+                  <Select value={cropType} onValueChange={setCropType}>
+                    <SelectTrigger id="cropType" className="h-12">
+                      <SelectValue placeholder="Select crop type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CROP_TYPE_OPTIONS.map((crop) => (
+                        <SelectItem key={crop.value} value={crop.value}>
+                          <div className="flex items-center gap-2">
+                            <crop.icon className="h-4 w-4 text-teal-600" />
+                            {crop.label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="cropType">Crop Type *</Label>
-                <Select value={cropType} onValueChange={setCropType}>
-                  <SelectTrigger id="cropType">
-                    <SelectValue placeholder="Select crop type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CROP_TYPE_OPTIONS.map((crop) => (
-                      <SelectItem key={crop.value} value={crop.value}>
-                        <div className="flex items-center gap-2">
-                          <crop.icon className="h-4 w-4" />
-                          {crop.label}
+
+                <div className="space-y-2">
+                  <Label htmlFor="cropVariety" className="text-base font-semibold">Variety / Cultivar</Label>
+                  <Input
+                    id="cropVariety"
+                    placeholder="e.g., Moso, Madake, Clone 433"
+                    value={cropVariety}
+                    onChange={(e) => setCropVariety(e.target.value)}
+                    className="h-12"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="title" className="text-base font-semibold">Listing Title *</Label>
+                  <Input
+                    id="title"
+                    placeholder="e.g., 500ha Eucalyptus Plantation - QLD"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="h-12"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description" className="text-base font-semibold">Description</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="Describe your plantation, growing conditions, sustainability practices..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={4}
+                    className="resize-none"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-6 border-t">
+                  <Button
+                    onClick={() => setCurrentStep(2)}
+                    disabled={!canProceedStep1}
+                    size="lg"
+                    className="bg-teal-600 hover:bg-teal-700"
+                  >
+                    Next Step
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 2: Location */}
+          {currentStep === 2 && (
+            <Card className="border-t-4 border-t-teal-500">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-teal-100">
+                    <MapPin className="h-6 w-6 text-teal-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-2xl">Location & Land</CardTitle>
+                    <CardDescription>Where is your plantation located?</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="state" className="text-base font-semibold">State *</Label>
+                    <Select value={state} onValueChange={setState}>
+                      <SelectTrigger id="state" className="h-12">
+                        <SelectValue placeholder="Select state" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {AUSTRALIAN_STATES.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>
+                            {s.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="region" className="text-base font-semibold">Region</Label>
+                    <Input
+                      id="region"
+                      placeholder="e.g., Darling Downs, Murray-Darling"
+                      value={region}
+                      onChange={(e) => setRegion(e.target.value)}
+                      className="h-12"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="landAreaHectares" className="text-base font-semibold">Land Area (hectares) *</Label>
+                    <Input
+                      id="landAreaHectares"
+                      type="number"
+                      placeholder="e.g., 500"
+                      value={landAreaHectares}
+                      onChange={(e) => setLandAreaHectares(e.target.value)}
+                      className="h-12 font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="landStatus" className="text-base font-semibold">Land Status</Label>
+                    <Select value={landStatus} onValueChange={setLandStatus}>
+                      <SelectTrigger id="landStatus" className="h-12">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LAND_STATUS_OPTIONS.map((status) => (
+                          <SelectItem key={status.value} value={status.value}>
+                            {status.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex justify-between gap-3 pt-6 border-t">
+                  <Button variant="outline" onClick={() => setCurrentStep(1)} size="lg">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Previous
+                  </Button>
+                  <Button
+                    onClick={() => setCurrentStep(3)}
+                    disabled={!canProceedStep2}
+                    size="lg"
+                    className="bg-teal-600 hover:bg-teal-700"
+                  >
+                    Next Step
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 3: Timeline */}
+          {currentStep === 3 && (
+            <Card className="border-t-4 border-t-teal-500">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-teal-100">
+                    <Calendar className="h-6 w-6 text-teal-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-2xl">Projection Timeline</CardTitle>
+                    <CardDescription>Define the timeframe for your yield projections</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="projectionStartYear" className="text-base font-semibold">Start Year *</Label>
+                    <Select value={projectionStartYear} onValueChange={setProjectionStartYear}>
+                      <SelectTrigger id="projectionStartYear" className="h-12">
+                        <SelectValue placeholder="Select year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + i).map((year) => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="projectionEndYear" className="text-base font-semibold">End Year *</Label>
+                    <Select value={projectionEndYear} onValueChange={setProjectionEndYear}>
+                      <SelectTrigger id="projectionEndYear" className="h-12">
+                        <SelectValue placeholder="Select year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 30 }, (_, i) => parseInt(projectionStartYear || "2025") + i).map((year) => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="plantingDate" className="text-base font-semibold">Planting Date</Label>
+                    <Input
+                      id="plantingDate"
+                      type="date"
+                      value={plantingDate}
+                      onChange={(e) => setPlantingDate(e.target.value)}
+                      className="h-12"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="firstHarvestYear" className="text-base font-semibold">First Harvest Year</Label>
+                    <Select value={firstHarvestYear} onValueChange={setFirstHarvestYear}>
+                      <SelectTrigger id="firstHarvestYear" className="h-12">
+                        <SelectValue placeholder="Select year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 30 }, (_, i) => parseInt(projectionStartYear || "2025") + i).map((year) => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="bg-teal-50 border border-teal-100 rounded-xl p-5">
+                  <p className="text-sm text-teal-700">
+                    Projection period: <strong className="text-teal-800">{parseInt(projectionEndYear) - parseInt(projectionStartYear) + 1} years</strong>
+                    {" "}({projectionStartYear} - {projectionEndYear})
+                  </p>
+                </div>
+
+                <div className="flex justify-between gap-3 pt-6 border-t">
+                  <Button variant="outline" onClick={() => setCurrentStep(2)} size="lg">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Previous
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      generateProjections();
+                      setCurrentStep(4);
+                    }}
+                    disabled={!canProceedStep3}
+                    size="lg"
+                    className="bg-teal-600 hover:bg-teal-700"
+                  >
+                    Next Step
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 4: Yield Projections */}
+          {currentStep === 4 && (
+            <Card className="border-t-4 border-t-teal-500">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-teal-100">
+                    <TrendingUp className="h-6 w-6 text-teal-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-2xl">Yield Projections</CardTitle>
+                    <CardDescription>Enter projected yields for each year</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="bg-teal-50 border border-teal-100 rounded-xl p-5 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                  <div>
+                    <p className="text-sm text-teal-600 mb-1">Total Projected Volume</p>
+                    <p className="text-3xl font-bold text-teal-800 font-mono">{totalProjectedTonnes.toLocaleString()} tonnes</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={generateProjections} className="border-teal-200 text-teal-700 hover:bg-teal-100">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Regenerate Years
+                  </Button>
+                </div>
+
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                  {projections.map((projection, index) => (
+                    <div key={projection.projectionYear} className="border rounded-xl p-4 hover:border-teal-200 transition-colors">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-bold text-lg">{projection.projectionYear}</h4>
+                        <Badge variant="outline" className="border-teal-200 text-teal-700">Year {index + 1}</Badge>
+                      </div>
+                      <div className="grid md:grid-cols-4 gap-4">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Projected Tonnes *</Label>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            value={projection.projectedTonnes}
+                            onChange={(e) => updateProjection(index, "projectedTonnes", e.target.value)}
+                            className="font-mono h-10"
+                          />
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cropVariety">Variety / Cultivar</Label>
-                <Input
-                  id="cropVariety"
-                  placeholder="e.g., Moso, Madake, Clone 433"
-                  value={cropVariety}
-                  onChange={(e) => setCropVariety(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="title">Listing Title *</Label>
-                <Input
-                  id="title"
-                  placeholder="e.g., 500ha Eucalyptus Plantation - QLD"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Describe your plantation, growing conditions, sustainability practices..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={4}
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button
-                  onClick={() => setCurrentStep(2)}
-                  disabled={!canProceedStep1}
-                  rightIcon={<ArrowRight className="h-4 w-4" />}
-                >
-                  Next Step
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Step 2: Location */}
-        {currentStep === 2 && (
-          <Card variant="elevated">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <MapPin className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Location & Land</CardTitle>
-                  <CardDescription>Where is your plantation located?</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="state">State *</Label>
-                  <Select value={state} onValueChange={setState}>
-                    <SelectTrigger id="state">
-                      <SelectValue placeholder="Select state" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {AUSTRALIAN_STATES.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>
-                          {s.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="region">Region</Label>
-                  <Input
-                    id="region"
-                    placeholder="e.g., Darling Downs, Murray-Darling"
-                    value={region}
-                    onChange={(e) => setRegion(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="landAreaHectares">Land Area (hectares) *</Label>
-                  <Input
-                    id="landAreaHectares"
-                    type="number"
-                    placeholder="e.g., 500"
-                    value={landAreaHectares}
-                    onChange={(e) => setLandAreaHectares(e.target.value)}
-                    className="font-mono"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="landStatus">Land Status</Label>
-                  <Select value={landStatus} onValueChange={setLandStatus}>
-                    <SelectTrigger id="landStatus">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {LAND_STATUS_OPTIONS.map((status) => (
-                        <SelectItem key={status.value} value={status.value}>
-                          {status.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="flex justify-between gap-2 pt-4 border-t">
-                <Button variant="outline" onClick={() => setCurrentStep(1)} leftIcon={<ArrowLeft className="h-4 w-4" />}>
-                  Previous
-                </Button>
-                <Button
-                  onClick={() => setCurrentStep(3)}
-                  disabled={!canProceedStep2}
-                  rightIcon={<ArrowRight className="h-4 w-4" />}
-                >
-                  Next Step
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Step 3: Timeline */}
-        {currentStep === 3 && (
-          <Card variant="elevated">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Calendar className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Projection Timeline</CardTitle>
-                  <CardDescription>Define the timeframe for your yield projections</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="projectionStartYear">Start Year *</Label>
-                  <Select value={projectionStartYear} onValueChange={setProjectionStartYear}>
-                    <SelectTrigger id="projectionStartYear">
-                      <SelectValue placeholder="Select year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + i).map((year) => (
-                        <SelectItem key={year} value={year.toString()}>
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="projectionEndYear">End Year *</Label>
-                  <Select value={projectionEndYear} onValueChange={setProjectionEndYear}>
-                    <SelectTrigger id="projectionEndYear">
-                      <SelectValue placeholder="Select year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 30 }, (_, i) => parseInt(projectionStartYear || "2025") + i).map((year) => (
-                        <SelectItem key={year} value={year.toString()}>
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="plantingDate">Planting Date</Label>
-                  <Input
-                    id="plantingDate"
-                    type="date"
-                    value={plantingDate}
-                    onChange={(e) => setPlantingDate(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="firstHarvestYear">First Harvest Year</Label>
-                  <Select value={firstHarvestYear} onValueChange={setFirstHarvestYear}>
-                    <SelectTrigger id="firstHarvestYear">
-                      <SelectValue placeholder="Select year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 30 }, (_, i) => parseInt(projectionStartYear || "2025") + i).map((year) => (
-                        <SelectItem key={year} value={year.toString()}>
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="bg-muted/50 rounded-lg p-4">
-                <p className="text-sm text-muted-foreground">
-                  Projection period: <strong>{parseInt(projectionEndYear) - parseInt(projectionStartYear) + 1} years</strong>
-                  {" "}({projectionStartYear} - {projectionEndYear})
-                </p>
-              </div>
-
-              <div className="flex justify-between gap-2 pt-4 border-t">
-                <Button variant="outline" onClick={() => setCurrentStep(2)} leftIcon={<ArrowLeft className="h-4 w-4" />}>
-                  Previous
-                </Button>
-                <Button
-                  onClick={() => {
-                    generateProjections();
-                    setCurrentStep(4);
-                  }}
-                  disabled={!canProceedStep3}
-                  rightIcon={<ArrowRight className="h-4 w-4" />}
-                >
-                  Next Step
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Step 4: Yield Projections */}
-        {currentStep === 4 && (
-          <Card variant="elevated">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Yield Projections</CardTitle>
-                  <CardDescription>Enter projected yields for each year</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="bg-muted/50 rounded-lg p-4 flex justify-between items-center">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Projected Volume</p>
-                  <p className="text-2xl font-bold">{totalProjectedTonnes.toLocaleString()} tonnes</p>
-                </div>
-                <Button variant="outline" size="sm" onClick={generateProjections}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Regenerate Years
-                </Button>
-              </div>
-
-              <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                {projections.map((projection, index) => (
-                  <div key={projection.projectionYear} className="border rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-semibold">{projection.projectionYear}</h4>
-                      <Badge variant="outline">Year {index + 1}</Badge>
-                    </div>
-                    <div className="grid md:grid-cols-4 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Projected Tonnes *</Label>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          value={projection.projectedTonnes}
-                          onChange={(e) => updateProjection(index, "projectedTonnes", e.target.value)}
-                          className="font-mono"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Confidence %</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          max="100"
-                          placeholder="80"
-                          value={projection.confidencePercent}
-                          onChange={(e) => updateProjection(index, "confidencePercent", e.target.value)}
-                          className="font-mono"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Harvest Season</Label>
-                        <Select
-                          value={projection.harvestSeason}
-                          onValueChange={(v) => updateProjection(index, "harvestSeason", v)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {HARVEST_SEASON_OPTIONS.map((season) => (
-                              <SelectItem key={season.value} value={season.value}>
-                                {season.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Notes</Label>
-                        <Input
-                          placeholder="Optional notes"
-                          value={projection.notes}
-                          onChange={(e) => updateProjection(index, "notes", e.target.value)}
-                        />
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Confidence %</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            placeholder="80"
+                            value={projection.confidencePercent}
+                            onChange={(e) => updateProjection(index, "confidencePercent", e.target.value)}
+                            className="font-mono h-10"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Harvest Season</Label>
+                          <Select
+                            value={projection.harvestSeason}
+                            onValueChange={(v) => updateProjection(index, "harvestSeason", v)}
+                          >
+                            <SelectTrigger className="h-10">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {HARVEST_SEASON_OPTIONS.map((season) => (
+                                <SelectItem key={season.value} value={season.value}>
+                                  {season.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Notes</Label>
+                          <Input
+                            placeholder="Optional notes"
+                            value={projection.notes}
+                            onChange={(e) => updateProjection(index, "notes", e.target.value)}
+                            className="h-10"
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex justify-between gap-2 pt-4 border-t">
-                <Button variant="outline" onClick={() => setCurrentStep(3)} leftIcon={<ArrowLeft className="h-4 w-4" />}>
-                  Previous
-                </Button>
-                <Button
-                  onClick={() => setCurrentStep(5)}
-                  disabled={!canProceedStep4}
-                  rightIcon={<ArrowRight className="h-4 w-4" />}
-                >
-                  Next Step
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Step 5: Pricing & Quality */}
-        {currentStep === 5 && (
-          <Card variant="elevated">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <DollarSign className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Pricing & Quality Expectations</CardTitle>
-                  <CardDescription>Set indicative pricing and quality parameters</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="indicativePricePerTonne">Indicative Price ($/tonne)</Label>
-                  <Input
-                    id="indicativePricePerTonne"
-                    type="number"
-                    placeholder="e.g., 120"
-                    value={indicativePricePerTonne}
-                    onChange={(e) => setIndicativePricePerTonne(e.target.value)}
-                    className="font-mono"
-                  />
-                  <p className="text-xs text-muted-foreground">Leave blank for "negotiable"</p>
+                  ))}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="priceEscalationPercent">Annual Price Escalation (%)</Label>
-                  <Input
-                    id="priceEscalationPercent"
-                    type="number"
-                    step="0.1"
-                    placeholder="2.5"
-                    value={priceEscalationPercent}
-                    onChange={(e) => setPriceEscalationPercent(e.target.value)}
-                    className="font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="pricingNotes">Pricing Notes</Label>
-                <Textarea
-                  id="pricingNotes"
-                  placeholder="Any special pricing considerations, volume discounts, etc."
-                  value={pricingNotes}
-                  onChange={(e) => setPricingNotes(e.target.value)}
-                  rows={3}
-                />
-              </div>
-
-              <div className="border-t pt-4">
-                <h4 className="font-semibold mb-4">Expected Quality Parameters</h4>
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="expectedCarbonIntensity">Carbon Intensity (kg CO₂e/t)</Label>
-                    <Input
-                      id="expectedCarbonIntensity"
-                      type="number"
-                      placeholder="e.g., 15"
-                      value={expectedCarbonIntensity}
-                      onChange={(e) => setExpectedCarbonIntensity(e.target.value)}
-                      className="font-mono"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="expectedMoistureContent">Moisture Content (%)</Label>
-                    <Input
-                      id="expectedMoistureContent"
-                      type="number"
-                      placeholder="e.g., 12"
-                      value={expectedMoistureContent}
-                      onChange={(e) => setExpectedMoistureContent(e.target.value)}
-                      className="font-mono"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="expectedEnergyContent">Energy Content (GJ/t)</Label>
-                    <Input
-                      id="expectedEnergyContent"
-                      type="number"
-                      placeholder="e.g., 18"
-                      value={expectedEnergyContent}
-                      onChange={(e) => setExpectedEnergyContent(e.target.value)}
-                      className="font-mono"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-between gap-2 pt-4 border-t">
-                <Button variant="outline" onClick={() => setCurrentStep(4)} leftIcon={<ArrowLeft className="h-4 w-4" />}>
-                  Previous
-                </Button>
-                <Button onClick={() => setCurrentStep(6)} rightIcon={<ArrowRight className="h-4 w-4" />}>
-                  Review
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Step 6: Review & Submit */}
-        {currentStep === 6 && (
-          <Card variant="elevated">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <FileText className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Review & Submit</CardTitle>
-                  <CardDescription>Review your futures listing before submitting</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              {/* Summary Cards */}
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                  <h4 className="font-semibold text-sm text-muted-foreground">CROP</h4>
-                  <p className="font-medium">
-                    {CROP_TYPE_OPTIONS.find((c) => c.value === cropType)?.label}
-                    {cropVariety && ` - ${cropVariety}`}
-                  </p>
-                  <p className="text-sm text-muted-foreground">{title}</p>
-                </div>
-
-                <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                  <h4 className="font-semibold text-sm text-muted-foreground">LOCATION</h4>
-                  <p className="font-medium">
-                    {AUSTRALIAN_STATES.find((s) => s.value === state)?.label}
-                    {region && `, ${region}`}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {parseFloat(landAreaHectares).toLocaleString()} ha ({LAND_STATUS_OPTIONS.find((l) => l.value === landStatus)?.label})
-                  </p>
-                </div>
-
-                <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                  <h4 className="font-semibold text-sm text-muted-foreground">TIMELINE</h4>
-                  <p className="font-medium">
-                    {projectionStartYear} - {projectionEndYear}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {parseInt(projectionEndYear) - parseInt(projectionStartYear) + 1} years
-                    {firstHarvestYear && `, first harvest ${firstHarvestYear}`}
-                  </p>
-                </div>
-
-                <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                  <h4 className="font-semibold text-sm text-muted-foreground">VOLUME</h4>
-                  <p className="font-medium">{totalProjectedTonnes.toLocaleString()} tonnes total</p>
-                  <p className="text-sm text-muted-foreground">
-                    ~{Math.round(totalProjectedTonnes / (parseInt(projectionEndYear) - parseInt(projectionStartYear) + 1)).toLocaleString()}{" "}
-                    tonnes/year average
-                  </p>
-                </div>
-              </div>
-
-              {/* Pricing Summary */}
-              <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-                <h4 className="font-semibold mb-2">Pricing</h4>
-                <p>
-                  {indicativePricePerTonne
-                    ? `$${parseFloat(indicativePricePerTonne).toFixed(2)}/tonne`
-                    : "Negotiable"}
-                  {priceEscalationPercent && ` (+${priceEscalationPercent}% p.a.)`}
-                </p>
-                {pricingNotes && <p className="text-sm text-muted-foreground mt-1">{pricingNotes}</p>}
-              </div>
-
-              {/* Quality Summary */}
-              {(expectedCarbonIntensity || expectedMoistureContent || expectedEnergyContent) && (
-                <div className="border rounded-lg p-4">
-                  <h4 className="font-semibold mb-2">Expected Quality</h4>
-                  <div className="flex gap-6 text-sm">
-                    {expectedCarbonIntensity && (
-                      <div>
-                        <span className="text-muted-foreground">Carbon: </span>
-                        <span className="font-medium">{expectedCarbonIntensity} kg CO₂e/t</span>
-                      </div>
-                    )}
-                    {expectedMoistureContent && (
-                      <div>
-                        <span className="text-muted-foreground">Moisture: </span>
-                        <span className="font-medium">{expectedMoistureContent}%</span>
-                      </div>
-                    )}
-                    {expectedEnergyContent && (
-                      <div>
-                        <span className="text-muted-foreground">Energy: </span>
-                        <span className="font-medium">{expectedEnergyContent} GJ/t</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4 border-t">
-                <Button variant="outline" onClick={() => setCurrentStep(5)} leftIcon={<ArrowLeft className="h-4 w-4" />}>
-                  Previous
-                </Button>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleSubmit(false)}
-                    disabled={isSubmitting}
-                    leftIcon={<Save className="h-4 w-4" />}
-                  >
-                    {isSubmitting ? "Saving..." : "Save as Draft"}
+                <div className="flex justify-between gap-3 pt-6 border-t">
+                  <Button variant="outline" onClick={() => setCurrentStep(3)} size="lg">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Previous
                   </Button>
                   <Button
-                    onClick={() => handleSubmit(true)}
-                    disabled={isSubmitting}
-                    leftIcon={<Send className="h-4 w-4" />}
+                    onClick={() => setCurrentStep(5)}
+                    disabled={!canProceedStep4}
+                    size="lg"
+                    className="bg-teal-600 hover:bg-teal-700"
                   >
-                    {isSubmitting ? "Publishing..." : "Publish Now"}
+                    Next Step
+                    <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 5: Pricing & Quality */}
+          {currentStep === 5 && (
+            <Card className="border-t-4 border-t-teal-500">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-teal-100">
+                    <DollarSign className="h-6 w-6 text-teal-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-2xl">Pricing & Quality</CardTitle>
+                    <CardDescription>Set indicative pricing and quality parameters</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="indicativePricePerTonne" className="text-base font-semibold">Indicative Price ($/tonne)</Label>
+                    <Input
+                      id="indicativePricePerTonne"
+                      type="number"
+                      placeholder="e.g., 120"
+                      value={indicativePricePerTonne}
+                      onChange={(e) => setIndicativePricePerTonne(e.target.value)}
+                      className="h-12 font-mono"
+                    />
+                    <p className="text-xs text-muted-foreground">Leave blank for "negotiable"</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="priceEscalationPercent" className="text-base font-semibold">Annual Price Escalation (%)</Label>
+                    <Input
+                      id="priceEscalationPercent"
+                      type="number"
+                      step="0.1"
+                      placeholder="2.5"
+                      value={priceEscalationPercent}
+                      onChange={(e) => setPriceEscalationPercent(e.target.value)}
+                      className="h-12 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="pricingNotes" className="text-base font-semibold">Pricing Notes</Label>
+                  <Textarea
+                    id="pricingNotes"
+                    placeholder="Any special pricing considerations, volume discounts, etc."
+                    value={pricingNotes}
+                    onChange={(e) => setPricingNotes(e.target.value)}
+                    rows={3}
+                    className="resize-none"
+                  />
+                </div>
+
+                <div className="pt-6 border-t">
+                  <h4 className="text-base font-semibold mb-4">Expected Quality Parameters</h4>
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="expectedCarbonIntensity">Carbon Intensity (kg CO₂e/t)</Label>
+                      <Input
+                        id="expectedCarbonIntensity"
+                        type="number"
+                        placeholder="e.g., 15"
+                        value={expectedCarbonIntensity}
+                        onChange={(e) => setExpectedCarbonIntensity(e.target.value)}
+                        className="h-12 font-mono"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="expectedMoistureContent">Moisture Content (%)</Label>
+                      <Input
+                        id="expectedMoistureContent"
+                        type="number"
+                        placeholder="e.g., 12"
+                        value={expectedMoistureContent}
+                        onChange={(e) => setExpectedMoistureContent(e.target.value)}
+                        className="h-12 font-mono"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="expectedEnergyContent">Energy Content (GJ/t)</Label>
+                      <Input
+                        id="expectedEnergyContent"
+                        type="number"
+                        placeholder="e.g., 18"
+                        value={expectedEnergyContent}
+                        onChange={(e) => setExpectedEnergyContent(e.target.value)}
+                        className="h-12 font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between gap-3 pt-6 border-t">
+                  <Button variant="outline" onClick={() => setCurrentStep(4)} size="lg">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Previous
+                  </Button>
+                  <Button onClick={() => setCurrentStep(6)} size="lg" className="bg-teal-600 hover:bg-teal-700">
+                    Review
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 6: Review & Submit */}
+          {currentStep === 6 && (
+            <Card className="border-t-4 border-t-teal-500">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-teal-100">
+                    <FileText className="h-6 w-6 text-teal-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-2xl">Review & Submit</CardTitle>
+                    <CardDescription>Review your futures listing before submitting</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Summary Cards */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="bg-muted/50 rounded-xl p-5 space-y-2">
+                    <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">CROP</h4>
+                    <p className="font-bold text-lg">
+                      {CROP_TYPE_OPTIONS.find((c) => c.value === cropType)?.label}
+                      {cropVariety && ` - ${cropVariety}`}
+                    </p>
+                    <p className="text-sm text-muted-foreground">{title}</p>
+                  </div>
+
+                  <div className="bg-muted/50 rounded-xl p-5 space-y-2">
+                    <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">LOCATION</h4>
+                    <p className="font-bold text-lg">
+                      {AUSTRALIAN_STATES.find((s) => s.value === state)?.label}
+                      {region && `, ${region}`}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {parseFloat(landAreaHectares).toLocaleString()} ha ({LAND_STATUS_OPTIONS.find((l) => l.value === landStatus)?.label})
+                    </p>
+                  </div>
+
+                  <div className="bg-muted/50 rounded-xl p-5 space-y-2">
+                    <h4 className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">TIMELINE</h4>
+                    <p className="font-bold text-lg">
+                      {projectionStartYear} - {projectionEndYear}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {parseInt(projectionEndYear) - parseInt(projectionStartYear) + 1} years
+                      {firstHarvestYear && `, first harvest ${firstHarvestYear}`}
+                    </p>
+                  </div>
+
+                  <div className="bg-teal-50 border border-teal-100 rounded-xl p-5 space-y-2">
+                    <h4 className="font-semibold text-xs text-teal-600 uppercase tracking-wider">VOLUME</h4>
+                    <p className="font-bold text-2xl text-teal-800 font-mono">{totalProjectedTonnes.toLocaleString()} t</p>
+                    <p className="text-sm text-teal-600">
+                      ~{Math.round(totalProjectedTonnes / (parseInt(projectionEndYear) - parseInt(projectionStartYear) + 1)).toLocaleString()}{" "}
+                      tonnes/year average
+                    </p>
+                  </div>
+                </div>
+
+                {/* Pricing Summary */}
+                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-5">
+                  <h4 className="font-semibold mb-2 text-emerald-800">Pricing</h4>
+                  <p className="text-lg font-mono">
+                    {indicativePricePerTonne
+                      ? <span className="font-bold text-emerald-700">${parseFloat(indicativePricePerTonne).toFixed(2)}/tonne</span>
+                      : <span className="text-emerald-600">Negotiable</span>}
+                    {priceEscalationPercent && <span className="text-emerald-600 ml-2">(+{priceEscalationPercent}% p.a.)</span>}
+                  </p>
+                  {pricingNotes && <p className="text-sm text-emerald-600 mt-2 italic">{pricingNotes}</p>}
+                </div>
+
+                {/* Quality Summary */}
+                {(expectedCarbonIntensity || expectedMoistureContent || expectedEnergyContent) && (
+                  <div className="border rounded-xl p-5">
+                    <h4 className="font-semibold mb-3">Expected Quality</h4>
+                    <div className="flex flex-wrap gap-6">
+                      {expectedCarbonIntensity && (
+                        <div className="text-center">
+                          <p className="text-2xl font-bold font-mono">{expectedCarbonIntensity}</p>
+                          <p className="text-xs text-muted-foreground">kg CO₂e/t</p>
+                        </div>
+                      )}
+                      {expectedMoistureContent && (
+                        <div className="text-center">
+                          <p className="text-2xl font-bold font-mono">{expectedMoistureContent}%</p>
+                          <p className="text-xs text-muted-foreground">Moisture</p>
+                        </div>
+                      )}
+                      {expectedEnergyContent && (
+                        <div className="text-center">
+                          <p className="text-2xl font-bold font-mono">{expectedEnergyContent}</p>
+                          <p className="text-xs text-muted-foreground">GJ/t Energy</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row justify-between gap-4 pt-6 border-t">
+                  <Button variant="outline" onClick={() => setCurrentStep(5)} size="lg">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Previous
+                  </Button>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleSubmit(false)}
+                      disabled={isSubmitting}
+                      size="lg"
+                      className="border-teal-200 text-teal-700 hover:bg-teal-50"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {isSubmitting ? "Saving..." : "Save as Draft"}
+                    </Button>
+                    <Button
+                      onClick={() => handleSubmit(true)}
+                      disabled={isSubmitting}
+                      size="lg"
+                      className="bg-teal-600 hover:bg-teal-700"
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      {isSubmitting ? "Publishing..." : "Publish Now"}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </section>
+    </PageLayout>
   );
 }
