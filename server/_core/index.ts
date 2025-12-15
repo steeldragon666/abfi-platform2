@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { initializeScheduler } from "../scheduler";
+import { handleManusWebhook } from "../manus";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -36,6 +37,22 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+
+  // Manus AI webhook endpoint
+  app.post("/api/webhooks/manus", async (req, res) => {
+    try {
+      const result = await handleManusWebhook(req.body);
+      if (result.success) {
+        res.status(200).json(result);
+      } else {
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      console.error("[Manus Webhook] Error:", error);
+      res.status(500).json({ success: false, error: "Internal server error" });
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",
