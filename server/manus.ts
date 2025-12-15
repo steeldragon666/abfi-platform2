@@ -102,8 +102,9 @@ class ManusClient {
     const response = await fetch(`${this.apiUrl}${endpoint}`, {
       method,
       headers: {
-        'Authorization': `Bearer ${this.apiKey}`,
+        'API_KEY': this.apiKey,
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
       body: body ? JSON.stringify(body) : undefined,
     });
@@ -184,8 +185,8 @@ class ManusClient {
   // Webhooks
   // -------------------------------------------------------------------------
 
-  async registerWebhook(url: string): Promise<{ id: string; url: string }> {
-    return this.request('POST', '/webhooks', { url });
+  async registerWebhook(url: string): Promise<{ webhook_id: string }> {
+    return this.request('POST', '/webhooks', { webhook: { url } });
   }
 
   async deleteWebhook(webhookId: string): Promise<void> {
