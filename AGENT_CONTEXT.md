@@ -72,26 +72,58 @@ export const items = mysqlTable("items", {
 
 | Task | Owner | Status | Notes |
 |------|-------|--------|-------|
-| Futures migration | Claude Code | Complete | All 6 phases done |
-| Mock data fallback | Claude Code | Complete | ID-specific for buyer/supplier detail |
+| RSIE v2.1 Database Schema | Claude Code | Complete | 15 new tables added |
+| RSIE tRPC Routers | Claude Code | Pending | Next priority |
+| Explainer Graphics | Manus | In Progress | 7 sets of 6-panel graphics |
+| Landing Page Mockups | Manus | Complete | 3 design alternatives |
+| Data Source Research | Manus | Running | FIRMS, Tomorrow.io, Open-Meteo |
+
+## Manus AI Coordination
+
+### Project: ABFI Platform v2.1 Upgrade
+**Project ID:** `TRVnNPfjGBpknA5nSGuo4C`
+
+### Completed Tasks (with deliverables)
+1. **SHA-256 Explainer** - 6 panels ready
+2. **Weather Intelligence Explainer** - 6 panels ready
+3. **Supply Shock Explainer** - 6 panels ready
+4. **Landing Page Mockups** - 3 options (Corporate, Modern, Government)
+
+### Running Tasks
+- **RSIE Data Source Research** - API docs for FIRMS, Tomorrow.io, Open-Meteo
+- **RSIE Data Architecture Explainer** - 6 panels (just created)
+- **Futures Marketplace Explainer** - 6 panels (just created)
+
+### Webhook
+URL: `https://abfi.io/api/webhooks/manus`
+Webhook ID: `DNwWhJF2F7SMJ6Ka3Zr2hJ`
 
 ## Pending Decisions
 
-<!-- Add architectural decisions that need input -->
+- Which landing page design option to use (A/B/C or hybrid)?
+- DATABASE_URL configuration for migration push
 
 ## Handoff Notes
 
-### From Claude Code (Latest Session)
-- Completed futures mock data fallback for `FuturesDetailBuyer.tsx` and `FuturesDetailSupplier.tsx`
-- Fixed SelectItem empty value error in `FuturesMarketplace.tsx`
-- Updated Google Maps API key in `.env` (restricted to abfi.io)
-- All 179 tests passing
-- Build successful (280.89 kB main bundle)
+### From Claude Code (Latest Session - v2.1 Upgrade)
+- Added 15 RSIE foundation tables to `drizzle/schema.ts`:
+  - `dataSources`, `ingestionRuns` - Data provenance
+  - `rsieScoringMethods` - Versioned scoring rubrics
+  - `riskEvents` - Risk events with GeoJSON + bbox prefiltering
+  - `supplierSites`, `supplierRiskExposure`, `contractRiskExposure` - Exposure tracking
+  - `weatherGridDaily`, `forecastGridHourly` - Weather data
+  - `userFeedback` - Survey responses
+  - `abbaBaselineCells`, `biomassQualityProfiles` - ABBA/CSIRO data
+  - `spatialLayers`, `intelligenceItems` - Spatial/news data
+- Created Manus project and 7 tasks for graphics/research
+- TypeScript compiles successfully
+- Database migration requires DATABASE_URL (cloud DB credentials)
 
 ### For Next Agent
-- Supplier detail page (`/supplier/futures/:id`) requires auth to view
-- Map page may not work on localhost (API key restricted to abfi.io)
-- Consider adding localhost to Google Maps API key restrictions for dev
+- Run `npm run db:push` when DATABASE_URL is configured
+- Check Manus task outputs for completed graphics
+- Download graphics from Manus CDN to `client/public/images/explainers/`
+- Implement RSIE tRPC routers following patterns in `server/futuresRouter.ts`
 
 ---
 

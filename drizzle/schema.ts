@@ -3581,3 +3581,517 @@ export const futuresEOI = mysqlTable(
 
 export type FuturesEOI = typeof futuresEOI.$inferSelect;
 export type InsertFuturesEOI = typeof futuresEOI.$inferInsert;
+
+// ============================================================================
+// RSIE v2.1 - DATA PROVENANCE FOUNDATION
+// ============================================================================
+
+/**
+ * Data Sources Registry
+ * Registry of all external data providers for full provenance tracking
+ */
+export const dataSources = mysqlTable("data_sources", {
+  id: int("id").autoincrement().primaryKey(),
+  sourceKey: varchar("sourceKey", { length: 64 }).notNull().unique(), // e.g. 'silo', 'open_meteo', 'nasa_firms'
+  name: varchar("name", { length: 128 }).notNull(),
+  licenseClass: mysqlEnum("licenseClass", [
+    "CC_BY_4",
+    "CC_BY_3",
+    "COMMERCIAL",
+    "RESTRICTED",
+    "UNKNOWN",
+  ]).notNull(),
+  termsUrl: varchar("termsUrl", { length: 512 }),
+  attributionText: varchar("attributionText", { length: 512 }),
+  isEnabled: boolean("isEnabled").default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DataSource = typeof dataSources.$inferSelect;
+export type InsertDataSource = typeof dataSources.$inferInsert;
+
+/**
+ * Ingestion Runs Audit Log
+ * Every data ingestion job is logged for provenance
+ */
+export const ingestionRuns = mysqlTable(
+  "ingestion_runs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    sourceId: int("sourceId")
+      .notNull()
+      .references(() => dataSources.id),
+    runType: mysqlEnum("runType", [
+      "baseline",
+      "weather",
+      "impact",
+      "policy",
+      "spatial",
+    ]).notNull(),
+    status: mysqlEnum("status", [
+      "started",
+      "succeeded",
+      "failed",
+      "partial",
+    ]).notNull(),
+    startedAt: timestamp("startedAt").notNull(),
+    finishedAt: timestamp("finishedAt"),
+    recordsIn: int("recordsIn").default(0),
+    recordsOut: int("recordsOut").default(0),
+    errorMessage: text("errorMessage"),
+    artifactUri: varchar("artifactUri", { length: 512 }), // raw payload snapshot location
+    datasetVersion: varchar("datasetVersion", { length: 128 }), // CKAN revision, provider run id
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    sourceIdIdx: index("ingestion_source_idx").on(table.sourceId),
+    startedAtIdx: index("ingestion_started_idx").on(table.startedAt),
+  })
+);
+
+export type IngestionRun = typeof ingestionRuns.$inferSelect;
+export type InsertIngestionRun = typeof ingestionRuns.$inferInsert;
+
+/**
+ * RSIE Scoring Methods
+ * Versioned scoring rubric definitions for audit trail
+ */
+export const rsieScoringMethods = mysqlTable("rsie_scoring_methods", {
+  id: int("id").autoincrement().primaryKey(),
+  methodVersion: varchar("methodVersion", { length: 32 }).notNull().unique(), // e.g. 'rsie-score-v1.0'
+  definitionJson: json("definitionJson").notNull(), // weights, thresholds, mappings
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type RsieScoringMethod = typeof rsieScoringMethods.$inferSelect;
+export type InsertRsieScoringMethod = typeof rsieScoringMethods.$inferInsert;
+
+// ============================================================================
+// RSIE v2.1 - RISK EVENTS
+// ============================================================================
+
+/**
+ * Risk Events
+ * Append-only table with deterministic fingerprint for all risk events
+ */
+export const riskEvents = mysqlTable(
+  "risk_events",
+  {
+    id: int("id").autoincrement().primaryKey(),
+
+    eventType: mysqlEnum("eventType", [
+      "drought",
+      "cyclone",
+      "storm",
+      "flood",
+      "bushfire",
+      "heatwave",
+      "frost",
+      "pest",
+      "disease",
+      "policy",
+      "industrial_action",
+      "logistics_disruption",
+    ]).notNull(),
+
+    eventClass: mysqlEnum("eventClass", [
+      "hazard",
+      "biosecurity",
+      "systemic",
+    ])
+      .notNull()
+      .default("hazard"),
+
+    eventStatus: mysqlEnum("eventStatus", ["watch", "active", "resolved"])
+      .notNull()
+      .default("active"),
+
+    severity: mysqlEnum("severity", ["low", "medium", "high", "critical"]).notNull(),
+
+    affectedRegionGeojson: json("affectedRegionGeojson").notNull(),
+
+    // Bounding box for prefiltering (required for MySQL + GeoJSON approach)
+    bboxMinLat: decimal("bboxMinLat", { precision: 9, scale: 6 }),
+    bboxMinLng: decimal("bboxMinLng", { precision: 9, scale: 6 }),
+    bboxMaxLat: decimal("bboxMaxLat", { precision: 9, scale: 6 }),
+    bboxMaxLng: decimal("bboxMaxLng", { precision: 9, scale: 6 }),
+
+    startDate: timestamp("startDate").notNull(),
+    endDate: timestamp("endDate"),
+
+    scoreTotal: int("scoreTotal").notNull(),
+    scoreComponents: json("scoreComponents").notNull(),
+    confidence: decimal("confidence", { precision: 4, scale: 3 }).notNull(),
+    methodVersion: varchar("methodVersion", { length: 32 }).notNull(),
+
+    sourceId: int("sourceId").references(() => dataSources.id),
+    sourceRefs: json("sourceRefs"),
+    ingestionRunId: int("ingestionRunId").references(() => ingestionRuns.id),
+
+    eventFingerprint: varchar("eventFingerprint", { length: 64 }).notNull().unique(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    eventTypeIdx: index("risk_event_type_idx").on(table.eventType),
+    eventStatusIdx: index("risk_event_status_idx").on(table.eventStatus),
+    startDateIdx: index("risk_event_start_idx").on(table.startDate),
+    bboxIdx: index("risk_event_bbox_idx").on(
+      table.bboxMinLat,
+      table.bboxMaxLat,
+      table.bboxMinLng,
+      table.bboxMaxLng
+    ),
+  })
+);
+
+export type RiskEvent = typeof riskEvents.$inferSelect;
+export type InsertRiskEvent = typeof riskEvents.$inferInsert;
+
+// ============================================================================
+// RSIE v2.1 - SUPPLIER SITES & EXPOSURE
+// ============================================================================
+
+/**
+ * Supplier Sites
+ * Supplier location polygons with bounding boxes for spatial queries
+ */
+export const supplierSites = mysqlTable(
+  "supplier_sites",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    supplierId: int("supplierId")
+      .notNull()
+      .references(() => suppliers.id),
+    name: varchar("name", { length: 128 }),
+    regionState: varchar("regionState", { length: 8 }),
+    sitePolygonGeojson: json("sitePolygonGeojson").notNull(),
+
+    bboxMinLat: decimal("bboxMinLat", { precision: 9, scale: 6 }),
+    bboxMinLng: decimal("bboxMinLng", { precision: 9, scale: 6 }),
+    bboxMaxLat: decimal("bboxMaxLat", { precision: 9, scale: 6 }),
+    bboxMaxLng: decimal("bboxMaxLng", { precision: 9, scale: 6 }),
+
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    supplierIdIdx: index("site_supplier_idx").on(table.supplierId),
+    bboxIdx: index("site_bbox_idx").on(
+      table.bboxMinLat,
+      table.bboxMaxLat,
+      table.bboxMinLng,
+      table.bboxMaxLng
+    ),
+  })
+);
+
+export type SupplierSite = typeof supplierSites.$inferSelect;
+export type InsertSupplierSite = typeof supplierSites.$inferInsert;
+
+/**
+ * Supplier Risk Exposure
+ * Computed exposure between suppliers and risk events
+ */
+export const supplierRiskExposure = mysqlTable(
+  "supplier_risk_exposure",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    supplierId: int("supplierId")
+      .notNull()
+      .references(() => suppliers.id),
+    supplierSiteId: int("supplierSiteId").references(() => supplierSites.id),
+    riskEventId: int("riskEventId")
+      .notNull()
+      .references(() => riskEvents.id),
+
+    exposureFraction: decimal("exposureFraction", { precision: 6, scale: 4 }).notNull(), // 0..1
+    estimatedImpactTonnes: decimal("estimatedImpactTonnes", {
+      precision: 12,
+      scale: 2,
+    }).notNull(),
+    mitigationStatus: mysqlEnum("mitigationStatus", ["none", "partial", "full"]).default(
+      "none"
+    ),
+
+    computedAt: timestamp("computedAt").notNull(),
+  },
+  table => ({
+    supplierIdIdx: index("exposure_supplier_idx").on(table.supplierId),
+    riskEventIdIdx: index("exposure_event_idx").on(table.riskEventId),
+    uniqueExposure: unique("exposure_unique").on(table.supplierId, table.riskEventId),
+  })
+);
+
+export type SupplierRiskExposure = typeof supplierRiskExposure.$inferSelect;
+export type InsertSupplierRiskExposure = typeof supplierRiskExposure.$inferInsert;
+
+/**
+ * Contract Risk Exposure
+ * Roll-up from supplier exposure to contract level
+ */
+export const contractRiskExposure = mysqlTable(
+  "contract_risk_exposure",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    contractId: int("contractId")
+      .notNull()
+      .references(() => supplyContracts.id),
+    riskEventId: int("riskEventId")
+      .notNull()
+      .references(() => riskEvents.id),
+
+    exposureFraction: decimal("exposureFraction", { precision: 6, scale: 4 }).notNull(),
+    contractedTonnesAtRisk: decimal("contractedTonnesAtRisk", {
+      precision: 12,
+      scale: 2,
+    }).notNull(),
+    deliveryWindowOverlapDays: int("deliveryWindowOverlapDays").notNull(),
+    deliveryRiskScore: int("deliveryRiskScore").notNull(), // 0..100
+    confidence: decimal("confidence", { precision: 4, scale: 3 }).notNull(),
+
+    computedAt: timestamp("computedAt").notNull(),
+  },
+  table => ({
+    contractIdIdx: index("contract_exposure_contract_idx").on(table.contractId),
+    riskEventIdIdx: index("contract_exposure_event_idx").on(table.riskEventId),
+    uniqueExposure: unique("contract_exposure_unique").on(
+      table.contractId,
+      table.riskEventId
+    ),
+  })
+);
+
+export type ContractRiskExposure = typeof contractRiskExposure.$inferSelect;
+export type InsertContractRiskExposure = typeof contractRiskExposure.$inferInsert;
+
+// ============================================================================
+// RSIE v2.1 - WEATHER DATA
+// ============================================================================
+
+/**
+ * Weather Grid Daily (SILO Historical)
+ */
+export const weatherGridDaily = mysqlTable(
+  "weather_grid_daily",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    cellId: varchar("cellId", { length: 20 }).notNull(),
+    date: date("date").notNull(),
+    rainfall: decimal("rainfall", { precision: 6, scale: 2 }),
+    tmin: decimal("tmin", { precision: 5, scale: 2 }),
+    tmax: decimal("tmax", { precision: 5, scale: 2 }),
+    et0: decimal("et0", { precision: 6, scale: 2 }),
+    radiation: decimal("radiation", { precision: 6, scale: 2 }),
+    vpd: decimal("vpd", { precision: 5, scale: 3 }),
+    sourceId: int("sourceId").references(() => dataSources.id),
+    ingestionRunId: int("ingestionRunId").references(() => ingestionRuns.id),
+    retrievedAt: timestamp("retrievedAt"),
+    qualityFlag: varchar("qualityFlag", { length: 10 }),
+  },
+  table => ({
+    cellDateUnique: unique("weather_cell_date").on(table.cellId, table.date),
+    cellIdIdx: index("weather_cell_idx").on(table.cellId),
+    dateIdx: index("weather_date_idx").on(table.date),
+  })
+);
+
+export type WeatherGridDaily = typeof weatherGridDaily.$inferSelect;
+export type InsertWeatherGridDaily = typeof weatherGridDaily.$inferInsert;
+
+/**
+ * Forecast Grid Hourly (Open-Meteo)
+ */
+export const forecastGridHourly = mysqlTable(
+  "forecast_grid_hourly",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    cellId: varchar("cellId", { length: 20 }).notNull(),
+    forecastRunTime: timestamp("forecastRunTime").notNull(),
+    hourTime: timestamp("hourTime").notNull(),
+    soilMoisture0_7cm: decimal("soilMoisture0_7cm", { precision: 5, scale: 3 }),
+    soilMoisture7_28cm: decimal("soilMoisture7_28cm", { precision: 5, scale: 3 }),
+    soilTemp: decimal("soilTemp", { precision: 5, scale: 2 }),
+    et0: decimal("et0", { precision: 6, scale: 2 }),
+    rainfall: decimal("rainfall", { precision: 6, scale: 2 }),
+    windSpeed: decimal("windSpeed", { precision: 5, scale: 2 }),
+    sourceId: int("sourceId").references(() => dataSources.id),
+    ingestionRunId: int("ingestionRunId").references(() => ingestionRuns.id),
+    retrievedAt: timestamp("retrievedAt"),
+  },
+  table => ({
+    forecastUnique: unique("forecast_unique").on(
+      table.cellId,
+      table.forecastRunTime,
+      table.hourTime
+    ),
+    cellIdIdx: index("forecast_cell_idx").on(table.cellId),
+    hourTimeIdx: index("forecast_hour_idx").on(table.hourTime),
+  })
+);
+
+export type ForecastGridHourly = typeof forecastGridHourly.$inferSelect;
+export type InsertForecastGridHourly = typeof forecastGridHourly.$inferInsert;
+
+// ============================================================================
+// RSIE v2.1 - USER FEEDBACK SURVEY
+// ============================================================================
+
+/**
+ * User Feedback
+ * Survey responses from users
+ */
+export const userFeedback = mysqlTable("user_feedback", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").references(() => users.id),
+  sessionDurationMinutes: int("sessionDurationMinutes"),
+  likes: json("likes"), // Array of enum strings
+  improvements: json("improvements"), // Array of enum strings
+  featureRequests: text("featureRequests"),
+  npsScore: int("npsScore"), // 0-10
+  otherFeedback: text("otherFeedback"),
+  dismissedWithoutCompleting: boolean("dismissedWithoutCompleting").default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type UserFeedback = typeof userFeedback.$inferSelect;
+export type InsertUserFeedback = typeof userFeedback.$inferInsert;
+
+// ============================================================================
+// RSIE v2.1 - BASELINE DATA SNAPSHOTS
+// ============================================================================
+
+/**
+ * ABBA Baseline Cells
+ * Normalized snapshots of ABBA feedstock baseline data
+ */
+export const abbaBaselineCells = mysqlTable(
+  "abba_baseline_cells",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    datasetVersion: varchar("datasetVersion", { length: 128 }).notNull(),
+    regionType: mysqlEnum("regionType", ["SA2", "SA4", "LGA"]).notNull(),
+    regionCode: varchar("regionCode", { length: 16 }).notNull(),
+    feedstockTypeKey: varchar("feedstockTypeKey", { length: 64 }).notNull(),
+    annualDryTonnes: decimal("annualDryTonnes", { precision: 14, scale: 2 }).notNull(),
+
+    methodRef: varchar("methodRef", { length: 512 }),
+    confidence: decimal("confidence", { precision: 4, scale: 3 }).notNull(),
+    sourceId: int("sourceId")
+      .notNull()
+      .references(() => dataSources.id),
+    ingestionRunId: int("ingestionRunId")
+      .notNull()
+      .references(() => ingestionRuns.id),
+    retrievedAt: timestamp("retrievedAt").notNull(),
+  },
+  table => ({
+    versionRegionUnique: unique("abba_version_region").on(
+      table.datasetVersion,
+      table.regionType,
+      table.regionCode,
+      table.feedstockTypeKey
+    ),
+    regionIdx: index("abba_region_idx").on(table.regionType, table.regionCode),
+  })
+);
+
+export type AbbaBaselineCell = typeof abbaBaselineCells.$inferSelect;
+export type InsertAbbaBaselineCell = typeof abbaBaselineCells.$inferInsert;
+
+/**
+ * Biomass Quality Profiles
+ * CSIRO quality data snapshots
+ */
+export const biomassQualityProfiles = mysqlTable("biomass_quality_profiles", {
+  id: int("id").autoincrement().primaryKey(),
+  feedstockTypeKey: varchar("feedstockTypeKey", { length: 64 }).notNull().unique(),
+
+  hhvMjPerKg: decimal("hhvMjPerKg", { precision: 6, scale: 3 }),
+  moisturePct: decimal("moisturePct", { precision: 5, scale: 2 }),
+  ashPct: decimal("ashPct", { precision: 5, scale: 2 }),
+  fixedCarbonPct: decimal("fixedCarbonPct", { precision: 5, scale: 2 }),
+  volatileMatterPct: decimal("volatileMatterPct", { precision: 5, scale: 2 }),
+
+  ultimateAnalysis: json("ultimateAnalysis"), // C/H/N/S/O where available
+  ashComposition: json("ashComposition"),
+
+  sourceId: int("sourceId")
+    .notNull()
+    .references(() => dataSources.id),
+  ingestionRunId: int("ingestionRunId")
+    .notNull()
+    .references(() => ingestionRuns.id),
+  retrievedAt: timestamp("retrievedAt").notNull(),
+
+  confidence: decimal("confidence", { precision: 4, scale: 3 }).notNull(),
+});
+
+export type BiomassQualityProfile = typeof biomassQualityProfiles.$inferSelect;
+export type InsertBiomassQualityProfile = typeof biomassQualityProfiles.$inferInsert;
+
+/**
+ * Spatial Layers Registry
+ */
+export const spatialLayers = mysqlTable("spatial_layers", {
+  id: int("id").autoincrement().primaryKey(),
+  layerKey: varchar("layerKey", { length: 64 }).notNull().unique(), // e.g. 'capad_2024', 'clum_2023_v2'
+  layerType: mysqlEnum("layerType", [
+    "polygon",
+    "line",
+    "raster_ref",
+    "point",
+  ]).notNull(),
+  licenseClass: mysqlEnum("spatialLicenseClass", [
+    "CC_BY_4",
+    "CC_BY_3",
+    "COMMERCIAL",
+    "RESTRICTED",
+    "UNKNOWN",
+  ]).notNull(),
+
+  datasetVersion: varchar("datasetVersion", { length: 128 }),
+  storageUri: varchar("storageUri", { length: 512 }).notNull(), // where the snapshot lives
+  retrievedAt: timestamp("retrievedAt").notNull(),
+
+  sourceId: int("sourceId")
+    .notNull()
+    .references(() => dataSources.id),
+  ingestionRunId: int("ingestionRunId")
+    .notNull()
+    .references(() => ingestionRuns.id),
+
+  bbox: json("bbox"),
+  notes: text("notes"),
+});
+
+export type SpatialLayer = typeof spatialLayers.$inferSelect;
+export type InsertSpatialLayer = typeof spatialLayers.$inferInsert;
+
+/**
+ * Intelligence Items (News/Policy Feed)
+ */
+export const intelligenceItems = mysqlTable(
+  "intelligence_items",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    itemType: mysqlEnum("itemType", ["news", "policy", "market_note"]).notNull(),
+    title: varchar("title", { length: 256 }).notNull(),
+    sourceUrl: varchar("sourceUrl", { length: 512 }).notNull(),
+    publisher: varchar("publisher", { length: 128 }),
+    publishedAt: timestamp("publishedAt"),
+
+    summary: text("summary"),
+    summaryModel: varchar("summaryModel", { length: 64 }),
+    summaryGeneratedAt: timestamp("summaryGeneratedAt"),
+
+    tags: json("tags"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    sourceUrlUnique: unique("intelligence_source_url").on(table.sourceUrl),
+    itemTypeIdx: index("intelligence_type_idx").on(table.itemType),
+    publishedAtIdx: index("intelligence_published_idx").on(table.publishedAt),
+  })
+);
+
+export type IntelligenceItem = typeof intelligenceItems.$inferSelect;
+export type InsertIntelligenceItem = typeof intelligenceItems.$inferInsert;
