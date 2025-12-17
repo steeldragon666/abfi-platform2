@@ -206,13 +206,14 @@ export default function Home() {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2"
+            className="md:hidden h-10 w-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
           >
             {mobileMenuOpen ? (
-              <X className="h-6 w-6" />
+              <X className="h-5 w-5 text-slate-700" />
             ) : (
-              <Menu className="h-6 w-6" />
+              <Menu className="h-5 w-5 text-slate-700" />
             )}
           </button>
         </div>

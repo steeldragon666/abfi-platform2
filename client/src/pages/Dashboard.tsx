@@ -40,8 +40,10 @@ import {
   StaggerContainer,
   StaggerItem,
   HoverCard,
+  AnimatedCounter,
 } from "@/components/ui/motion";
 import DashboardLayout from "@/components/DashboardLayout";
+import { StatsCardPremium, GlassCard, ProgressRing, StatusIndicator } from "@/components/ui/premium-cards";
 
 // Australian feedstock types with bamboo focus
 const FEEDSTOCK_TYPES = [
@@ -352,39 +354,67 @@ export default function Dashboard() {
   return (
     <DashboardLayout>
       <PageWrapper className="max-w-7xl">
-        {/* Welcome Section */}
+        {/* Welcome Section - Premium Header */}
         <FadeInUp className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-1">
-            Welcome back, {user?.name || "User"}
-          </h1>
-          <p className="text-muted-foreground">
-            Here's what's happening with your Australian biomass portfolio today.
-          </p>
+          <GlassCard glow="subtle" hover={false} className="p-6 bg-gradient-to-br from-slate-50 to-white/80">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="h-10 w-10 rounded-full bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center text-white font-semibold">
+                    {user?.name?.charAt(0) || "U"}
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold text-slate-900">
+                      Welcome back, {user?.name || "User"}
+                    </h1>
+                    <p className="text-muted-foreground text-sm">
+                      Here's what's happening with your Australian biomass portfolio today.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="hidden md:flex items-center gap-4">
+                <StatusIndicator status="active" label="Platform Online" />
+                <div className="h-8 w-px bg-slate-200" />
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">Last updated</p>
+                  <p className="text-sm font-medium">{new Date().toLocaleTimeString()}</p>
+                </div>
+              </div>
+            </div>
+          </GlassCard>
         </FadeInUp>
 
         {/* Stats Cards Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatsCardNew
+          <StatsCardPremium
             title="Active Contracts"
             value={stats.activeContracts}
             icon={FileText}
+            description="Signed agreements"
+            trend={{ value: 12, direction: "up" }}
           />
-          <StatsCardNew
+          <StatsCardPremium
             title="Pending Inquiries"
             value={stats.pendingInquiries}
             icon={MessageSquare}
             variant="warning"
+            description="Awaiting response"
           />
-          <StatsCardNew
+          <StatsCardPremium
             title="Total Volume (AUD)"
             value={stats.totalVolume}
             icon={DollarSign}
+            variant="gold"
+            description="Year to date"
+            trend={{ value: 8, direction: "up" }}
           />
-          <StatsCardNew
+          <StatsCardPremium
             title="Risk Score"
             value={stats.riskScore}
             icon={Shield}
             variant="success"
+            description="ABFI Rating"
           />
         </div>
 
@@ -631,15 +661,30 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              {/* Contract Status */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Contract Status</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <DonutChart data={CONTRACT_STATUS_DATA} total={20} />
-                </CardContent>
-              </Card>
+              {/* Contract Status - Enhanced */}
+              <GlassCard glow="subtle" className="p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <FileText className="h-5 w-5 text-teal-600" />
+                  <h3 className="font-semibold">Contract Status</h3>
+                </div>
+                <div className="flex items-center justify-center gap-8">
+                  <ProgressRing progress={65} color="success" label="Active" />
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                      <span className="text-sm">Active (65%)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-amber-500" />
+                      <span className="text-sm">Pending (20%)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-slate-400" />
+                      <span className="text-sm">Closed (15%)</span>
+                    </div>
+                  </div>
+                </div>
+              </GlassCard>
 
               {/* Featured Feedstock */}
               <Card className="bg-gradient-to-br from-emerald-50 to-white border-emerald-200">

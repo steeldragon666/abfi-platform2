@@ -40,6 +40,7 @@ import {
   BarChart3,
   BadgeCheck,
   Award,
+  Menu,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -419,19 +420,25 @@ function DashboardLayoutContent({
       </div>
 
       <SidebarInset>
+        {/* Mobile Header with Hamburger Menu */}
         {isMobile && (
-          <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
-              <div className="flex items-center gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="tracking-tight text-foreground">
-                    {activeMenuItem?.label ?? "Menu"}
-                  </span>
-                </div>
+          <header className="flex border-b h-14 items-center justify-between bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40 shadow-sm">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={toggleSidebar}
+                className="h-10 w-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Open navigation menu"
+              >
+                <Menu className="h-5 w-5 text-slate-700" />
+              </button>
+              <div className="flex items-center gap-2">
+                <Leaf className="h-5 w-5 text-teal-600" />
+                <span className="font-semibold tracking-tight text-foreground">
+                  {activeMenuItem?.label ?? "ABFI"}
+                </span>
               </div>
             </div>
-          </div>
+          </header>
         )}
         <main className="flex-1 p-4">{children}</main>
       </SidebarInset>

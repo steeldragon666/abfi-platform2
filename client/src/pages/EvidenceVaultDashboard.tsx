@@ -56,8 +56,11 @@ import { cn } from "@/lib/utils";
 import {
   PageWrapper,
   FadeInUp,
+  StaggerContainer,
+  StaggerItem,
 } from "@/components/ui/motion";
 import DashboardLayout from "@/components/DashboardLayout";
+import { StatsCardPremium, GlassCard, StatusIndicator, ProgressRing } from "@/components/ui/premium-cards";
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
 
@@ -536,149 +539,146 @@ export default function EvidenceVaultDashboard() {
   return (
     <DashboardLayout>
       <PageWrapper className="max-w-7xl">
-        {/* Header */}
+        {/* Header - Premium Glass Card */}
         <FadeInUp className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-1 flex items-center gap-3">
-                <Shield className="h-8 w-8 text-amber-600" />
-                Evidence Vault
-              </h1>
-              <p className="text-muted-foreground">
-                Blockchain-anchored document integrity verification
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              {/* Service Status Indicators */}
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg text-xs">
-                <span className="text-muted-foreground">Blockchain:</span>
-                {blockchainHealth?.configured ? (
-                  blockchainHealth.connected ? (
-                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                      Connected
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                      Disconnected
-                    </Badge>
-                  )
-                ) : (
-                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                    Not Configured
-                  </Badge>
-                )}
-                <span className="text-muted-foreground ml-2">IPFS:</span>
-                {ipfsHealth?.configured ? (
-                  ipfsHealth.connected ? (
-                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                      Connected
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                      Disconnected
-                    </Badge>
-                  )
-                ) : (
-                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                    Not Configured
-                  </Badge>
-                )}
+          <GlassCard glow="gold" hover={false} className="p-6">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
+                  <Shield className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-slate-900">
+                    Evidence Vault
+                  </h1>
+                  <p className="text-muted-foreground text-sm">
+                    Blockchain-anchored document integrity verification
+                  </p>
+                </div>
               </div>
-              <Button variant="outline" size="sm" onClick={handleRefresh}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
-              <CreateManifestDialog onSuccess={() => { refetchPending(); refetchStats(); }} />
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Service Status Indicators */}
+                <div className="flex items-center gap-4 px-4 py-2 bg-slate-50/80 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Blockchain:</span>
+                    <StatusIndicator
+                      status={blockchainHealth?.configured ? (blockchainHealth.connected ? "active" : "error") : "pending"}
+                      size="sm"
+                    />
+                  </div>
+                  <div className="h-4 w-px bg-slate-200" />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">IPFS:</span>
+                    <StatusIndicator
+                      status={ipfsHealth?.configured ? (ipfsHealth.connected ? "active" : "error") : "pending"}
+                      size="sm"
+                    />
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleRefresh} className="shadow-sm">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+                <CreateManifestDialog onSuccess={() => { refetchPending(); refetchStats(); }} />
+              </div>
             </div>
-          </div>
+          </GlassCard>
         </FadeInUp>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {/* Stats Cards - Premium Version */}
+        <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {statsLoading ? (
             <>
               {[1, 2, 3, 4].map(i => (
-                <Skeleton key={i} className="h-24 rounded-xl" />
+                <Skeleton key={i} className="h-28 rounded-xl" />
               ))}
             </>
           ) : (
             <>
-              <StatsCard
-                title="Total Manifests"
-                value={stats?.totalManifests || 0}
-                icon={Database}
-                description="All registered documents"
-              />
-              <StatsCard
-                title="Pending Anchoring"
-                value={stats?.pendingManifests || 0}
-                icon={Clock}
-                variant="pending"
-                description="Ready for blockchain"
-              />
-              <StatsCard
-                title="Batched"
-                value={stats?.batchedManifests || 0}
-                icon={GitBranch}
-                variant="info"
-                description="In Merkle tree"
-              />
-              <StatsCard
-                title="Anchored"
-                value={stats?.anchoredManifests || 0}
-                icon={CheckCircle2}
-                variant="success"
-                description="On-chain verified"
-              />
+              <StaggerItem>
+                <StatsCardPremium
+                  title="Total Manifests"
+                  value={stats?.totalManifests || 0}
+                  icon={Database}
+                  description="All registered documents"
+                />
+              </StaggerItem>
+              <StaggerItem>
+                <StatsCardPremium
+                  title="Pending Anchoring"
+                  value={stats?.pendingManifests || 0}
+                  icon={Clock}
+                  variant="warning"
+                  description="Ready for blockchain"
+                />
+              </StaggerItem>
+              <StaggerItem>
+                <StatsCardPremium
+                  title="Batched"
+                  value={stats?.batchedManifests || 0}
+                  icon={GitBranch}
+                  variant="info"
+                  description="In Merkle tree"
+                />
+              </StaggerItem>
+              <StaggerItem>
+                <StatsCardPremium
+                  title="Anchored"
+                  value={stats?.anchoredManifests || 0}
+                  icon={CheckCircle2}
+                  variant="success"
+                  description="On-chain verified"
+                />
+              </StaggerItem>
             </>
           )}
-        </div>
+        </StaggerContainer>
 
-        {/* Anchor Stats Row */}
+        {/* Anchor Stats Row - Enhanced */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Link2 className="h-5 w-5 text-blue-600" />
-                Chain Anchors
-              </CardTitle>
-              <CardDescription>Blockchain transaction batches</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-4 bg-slate-50 rounded-lg">
-                  <p className="text-3xl font-bold font-mono">{stats?.totalAnchors || 0}</p>
-                  <p className="text-sm text-muted-foreground">Total Anchors</p>
-                </div>
-                <div className="text-center p-4 bg-emerald-50 rounded-lg">
-                  <p className="text-3xl font-bold font-mono text-emerald-700">{stats?.confirmedAnchors || 0}</p>
-                  <p className="text-sm text-muted-foreground">Confirmed</p>
-                </div>
+          <GlassCard glow="primary" className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                <Link2 className="h-4 w-4 text-blue-600" />
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <h3 className="font-semibold">Chain Anchors</h3>
+                <p className="text-xs text-muted-foreground">Blockchain transaction batches</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-4 bg-slate-50/80 rounded-xl border border-slate-100">
+                <p className="text-3xl font-bold font-mono">{stats?.totalAnchors || 0}</p>
+                <p className="text-sm text-muted-foreground">Total Anchors</p>
+              </div>
+              <div className="text-center p-4 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl border border-emerald-100">
+                <p className="text-3xl font-bold font-mono text-emerald-700">{stats?.confirmedAnchors || 0}</p>
+                <p className="text-sm text-muted-foreground">Confirmed</p>
+              </div>
+            </div>
+          </GlassCard>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Hash className="h-5 w-5 text-purple-600" />
-                Hash Algorithm
-              </CardTitle>
-              <CardDescription>Cryptographic standards used</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                  <span className="text-sm text-muted-foreground">Document Hash</span>
-                  <Badge variant="outline">SHA-256</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                  <span className="text-sm text-muted-foreground">Merkle Tree</span>
-                  <Badge variant="outline">Keccak-256</Badge>
-                </div>
+          <GlassCard glow="subtle" className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-8 w-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                <Hash className="h-4 w-4 text-purple-600" />
               </div>
-            </CardContent>
-          </Card>
+              <div>
+                <h3 className="font-semibold">Hash Algorithm</h3>
+                <p className="text-xs text-muted-foreground">Cryptographic standards used</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-slate-50/80 rounded-xl border border-slate-100">
+                <span className="text-sm text-muted-foreground">Document Hash</span>
+                <Badge variant="outline" className="bg-white">SHA-256</Badge>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-slate-50/80 rounded-xl border border-slate-100">
+                <span className="text-sm text-muted-foreground">Merkle Tree</span>
+                <Badge variant="outline" className="bg-white">Keccak-256</Badge>
+              </div>
+            </div>
+          </GlassCard>
         </div>
 
         {/* Pending Manifests Table */}
